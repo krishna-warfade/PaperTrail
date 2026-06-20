@@ -37,28 +37,30 @@ PaperTrail is a centralized workspace designed for student research teams and fa
 
 ### Authentication & Services
 * JWT (JSON Web Tokens) for session authorization
-* bcrypt for secure password hashing
+* bcryptjs for secure password hashing
 * Nodemailer for email-based invitation flows
 * Cloudinary for paper storage
+* Multer for file upload handling
+* CORS for cross-origin resource sharing
 
 ---
 
 ## System Architecture
 
-The application uses an MVC (Model-View-Controller) architecture on the backend to decouple database schemas, application controllers, and route definitions. 
+The application uses an MVC (Model-View-Controller) architecture on the backend to decouple database schemas, application controllers, and route definitions. Source code is organized under a `src/` subdirectory within `server/`.
 
 ### Directory Structure
 ```text
 PaperTrail/
 ├── server/
-│   ├── config/             # Connection configurations (database, storage, mailer)
-│   ├── controllers/        # Express request handlers containing business logic
-│   ├── middlewares/        # Authentication, authorization, and upload middlewares
-│   ├── models/             # Mongoose schemas (User, Project, Invitation, Paper, etc.)
-│   ├── routes/             # REST API endpoint route definitions
-│   ├── services/           # External API integrations
-│   ├── utils/              # General helper functions
-│   ├── server.js           # Express application entry point
+│   ├── src/
+│   │   ├── config/             # Connection configurations (database)
+│   │   ├── controllers/        # Express request handlers containing business logic
+│   │   ├── middlewares/        # Authentication and authorization middlewares
+│   │   ├── models/             # Mongoose schemas (User, Project)
+│   │   └── routes/             # REST API endpoint route definitions
+│   ├── tests/                  # Test scripts
+│   ├── server.js               # Express application entry point
 │   ├── package.json
 │   └── .env
 └── README.md
@@ -68,11 +70,24 @@ PaperTrail/
 
 * **User**: name, email, password (hashed), role (LEADER, MEMBER, FACULTY)
 * **Project**: title, description, leader (Ref: User), faculty (Ref: User), members (Ref: User Array)
-* **Invitation**: email, projectId (Ref: Project), role, token, status (PENDING, ACCEPTED, REJECTED)
-* **Paper**: title, authors, year, keywords, projectId (Ref: Project), uploadedBy (Ref: User), pdfUrl
-* **Note**: paperId (Ref: Paper), authorId (Ref: User), content
-* **ProgressLog**: projectId (Ref: Project), userId (Ref: User), description, date
-* **Comment**: projectId (Ref: Project), authorId (Ref: User), content, createdAt
+
+---
+
+## API Endpoints
+
+### Authentication (`/api/auth`)
+| Method | Route       | Description                  | Auth Required |
+|--------|-------------|------------------------------|---------------|
+| POST   | `/register` | Register a new user          | No            |
+| POST   | `/login`    | Login and receive JWT token  | No            |
+| GET    | `/me`       | Get current user profile     | Yes           |
+
+### Projects (`/api/projects`)
+| Method | Route  | Description                          | Auth Required | Role Required |
+|--------|--------|--------------------------------------|---------------|---------------|
+| POST   | `/`    | Create a new project                 | Yes           | LEADER        |
+| GET    | `/`    | Get all projects for current user    | Yes           | Any           |
+| GET    | `/:id` | Get a specific project by ID         | Yes           | Any (member)  |
 
 ---
 
@@ -96,12 +111,13 @@ PaperTrail/
    MONGODB_URI=your_mongodb_connection_string
    JWT_SECRET=your_jwt_secret_key
    JWT_EXPIRES_IN=7d
-   
-   SMTP_HOST=smtp.mailtrap.io
-   SMTP_PORT=2525
-   SMTP_USER=your_smtp_username
-   SMTP_PASS=your_smtp_password
-   SMTP_FROM=noreply@papertrail.com
+
+   EMAIL_USER=your_email_address
+   EMAIL_PASSWORD=your_email_app_password
+
+   CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+   CLOUDINARY_API_KEY=your_cloudinary_api_key
+   CLOUDINARY_API_SECRET=your_cloudinary_api_secret
    ```
 
 3. **Install dependencies inside the server directory**:
