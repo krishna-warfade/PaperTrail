@@ -3,7 +3,8 @@ const router = express.Router();
 const {
   createProject,
   getProjects,
-  getProjectById
+  getProjectById,
+  removeMember
 } = require('../controllers/projectController');
 const { verifyToken, authorize } = require('../middlewares/authMiddleware');
 
@@ -14,5 +15,7 @@ router.post('/', authorize('LEADER'), createProject);
 router.get('/', getProjects);
 
 router.get('/:id', getProjectById);
+
+router.delete('/:projectId/members/:memberId', removeMember);
 
 module.exports = router;

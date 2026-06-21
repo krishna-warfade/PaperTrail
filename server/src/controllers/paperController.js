@@ -29,9 +29,9 @@ const uploadPaper = async (req, res) => {
     const result = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
-          resource_type: 'raw',
+          resource_type: 'image',
           folder: `papertrail/${projectId}`,
-          public_id: `${Date.now()}_${req.file.originalname}`,
+          public_id: `${Date.now()}_${req.file.originalname.replace(/\.[^/.]+$/, "")}`,
         },
         (error, result) => {
           if (error) reject(error);
@@ -90,8 +90,20 @@ const deletePaper = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to delete this paper' });
     }
 
-    const publicId = paper.pdfUrl.split('/').slice(-2).join('/').split('.')[0];
-    await cloudinary.uploader.destroy(publicId, { resource_type: 'raw' });
+    const getCloudinaryPublicId = (pdfUrl) => {
+      const parts = pdfUrl.split('/upload/');
+      if (parts.length < 2) return '';
+      const rest = parts[1];
+      const restParts = rest.split('/');
+      const startIdx = (restParts[0].startsWith('v') && !isNaN(restParts[0].substring(1))) ? 1 : 0;
+      const filePath = restParts.slice(startIdx).join('/');
+      const publicIdWithFolder = filePath.substring(0, filePath.lastIndexOf('.')) || filePath;
+      return decodeURIComponent(publicIdWithFolder);
+    };
+
+    const publicId = getCloudinaryPublicId(paper.pdfUrl);
+    const resourceType = paper.pdfUrl.includes('/raw/upload/') ? 'raw' : 'image';
+    await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
 
     await Paper.findByIdAndDelete(req.params.id);
 

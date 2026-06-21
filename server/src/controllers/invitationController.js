@@ -76,9 +76,7 @@ const acceptInvitation = async (req, res) => {
     }
 
     if (invitation.role === 'MEMBER') {
-      if (!project.members.includes(req.user._id)) {
-        project.members.push(req.user._id);
-      }
+      project.members.addToSet(req.user._id);
     } else if (invitation.role === 'FACULTY') {
       project.faculty = req.user._id;
     }
@@ -97,4 +95,30 @@ const acceptInvitation = async (req, res) => {
   }
 };
 
-module.exports = { sendInvitation, acceptInvitation };
+const verifyInvitationToken = async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    const invitation = await Invitation.findOne({ token });
+    if (!invitation) {
+      return res.status(404).json({ message: 'Invalid or expired invitation' });
+    }
+
+    if (invitation.status !== 'PENDING') {
+      return res.status(400).json({ message: 'Invitation already accepted or processed' });
+    }
+
+    const userExists = await User.findOne({ email: invitation.email.toLowerCase() });
+
+    res.status(200).json({
+      email: invitation.email,
+      role: invitation.role,
+      projectId: invitation.projectId,
+      registered: !!userExists
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { sendInvitation, acceptInvitation, verifyInvitationToken };
