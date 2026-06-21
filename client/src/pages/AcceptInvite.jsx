@@ -6,7 +6,7 @@ import { Shield, AlertCircle, CheckCircle, Loader, UserPlus, ArrowRight } from '
 export default function AcceptInvite() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
-  const { user, apiFetch, loading: authLoading } = useAuth();
+  const { user, apiFetch, logout, loading: authLoading } = useAuth();
 
   const [status, setStatus] = useState('verifying');
   const [message, setMessage] = useState('');
@@ -192,13 +192,24 @@ export default function AcceptInvite() {
               <h3 className="font-outfit text-md font-bold text-slate-200">Verification Failed</h3>
               <p className="text-slate-400 text-xs mt-2 max-w-xs mx-auto leading-relaxed">{message}</p>
 
-              <Link
-                to="/"
-                className="mt-6 inline-flex items-center gap-1.5 text-xs font-semibold text-slate-300 hover:text-white underline decoration-slate-800 hover:decoration-white transition-colors"
-              >
-                Go to Dashboard
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
+              {user && (
+                <button
+                  onClick={logout}
+                  className="mt-6 w-full flex items-center justify-center py-2.5 px-4 bg-slate-800 border border-slate-700 hover:bg-slate-950 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition-all cursor-pointer"
+                >
+                  Sign Out of {user.email}
+                </button>
+              )}
+
+              <div className="mt-6">
+                <Link
+                  to="/"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-300 hover:text-white underline decoration-slate-800 hover:decoration-white transition-colors"
+                >
+                  Go to Dashboard
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
             </div>
           )}
         </div>
