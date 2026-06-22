@@ -15,12 +15,14 @@ export default function Register() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const from = location.state?.from?.pathname || '/';
+
   // redirect authenticated users to the dashboard
   useEffect(() => {
     if (user) {
-      navigate('/', { replace: true });
+      navigate(from, { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, navigate, from]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,7 +30,7 @@ export default function Register() {
     setSubmitting(true);
     try {
       await register(name, email, password, role);
-      navigate('/');
+      navigate(from, { replace: true });
     } catch (err) {
       setError(err.message || 'Registration failed');
     } finally {
@@ -127,7 +129,12 @@ export default function Register() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="block w-full pl-10 pr-4 py-2.5 bg-slate-955 border border-slate-800 rounded-lg text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm font-medium"
+                    readOnly={!!location.state?.email}
+                    className={`block w-full pl-10 pr-4 py-2.5 border rounded-lg text-sm font-medium transition-all focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 ${
+                      location.state?.email
+                        ? 'bg-slate-900 border-slate-800/50 text-slate-400 cursor-not-allowed opacity-75'
+                        : 'bg-slate-955 border-slate-800 text-slate-200 placeholder-slate-600'
+                    }`}
                     placeholder="name@university.edu"
                   />
                 </div>

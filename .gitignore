@@ -37,5 +37,3 @@ Thumbs.db
 # Vite cache
 .vite/
 
-server/tests/
-tests/

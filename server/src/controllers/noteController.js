@@ -10,6 +10,24 @@ exports.addNote = async (req, res) => {
       return res.status(400).json({ message: 'paperId and content are required' });
     }
 
+    const paper = await Paper.findById(paperId);
+    if (!paper) {
+      return res.status(404).json({ message: 'Paper not found' });
+    }
+
+    const project = await Project.findById(paper.projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    const isLeader = project.leader.toString() === req.user._id.toString();
+    const isFaculty = project.faculty && project.faculty.toString() === req.user._id.toString();
+    const isMember = project.members.some(m => m.toString() === req.user._id.toString());
+
+    if (!isLeader && !isFaculty && !isMember) {
+      return res.status(403).json({ message: 'Not authorized to add notes for this project' });
+    }
+
     const note = await Note.create({
       paperId,
       authorId: req.user._id,
@@ -25,6 +43,24 @@ exports.addNote = async (req, res) => {
 exports.getNotesForPaper = async (req, res) => {
   try {
     const { paperId } = req.params;
+
+    const paper = await Paper.findById(paperId);
+    if (!paper) {
+      return res.status(404).json({ message: 'Paper not found' });
+    }
+
+    const project = await Project.findById(paper.projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    const isLeader = project.leader.toString() === req.user._id.toString();
+    const isFaculty = project.faculty && project.faculty.toString() === req.user._id.toString();
+    const isMember = project.members.some(m => m.toString() === req.user._id.toString());
+
+    if (!isLeader && !isFaculty && !isMember) {
+      return res.status(403).json({ message: 'Not authorized to view notes for this project' });
+    }
 
     const notes = await Note.find({ paperId })
       .populate('authorId', 'name email')

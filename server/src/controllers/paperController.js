@@ -64,6 +64,20 @@ const getProjectPapers = async (req, res) => {
   try {
     const { projectId } = req.params;
 
+    // Check project authorization
+    const project = await Project.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    const isLeader = project.leader.toString() === req.user._id.toString();
+    const isFaculty = project.faculty && project.faculty.toString() === req.user._id.toString();
+    const isMember = project.members.some(m => m.toString() === req.user._id.toString());
+
+    if (!isLeader && !isFaculty && !isMember) {
+      return res.status(403).json({ message: 'Not authorized to view papers for this project' });
+    }
+
     const papers = await Paper.find({ projectId })
       .populate('uploadedBy', 'name email')
       .sort({ createdAt: -1 });
