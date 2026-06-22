@@ -1,3 +1,11 @@
+const mongoose = require('mongoose');
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
+
+const Project = require('../src/models/Project');
+const ProgressLog = require('../src/models/progressLog');
+const Comment = require('../src/models/comment');
+
 const PORT = process.env.PORT || 5000;
 const BASE_URL = `http://localhost:${PORT}/api`;
 
@@ -240,6 +248,14 @@ async function runTests() {
       'PASSED: all entries contain required fields.'
     );
 
+    console.log('\n11. Cleaning up test data from DB...');
+    await mongoose.connect(process.env.MONGODB_URI);
+    await ProgressLog.deleteMany({ projectId });
+    await Comment.deleteMany({ projectId });
+    await Project.findByIdAndDelete(projectId);
+    await mongoose.connection.close();
+    console.log('Database cleanup complete.');
+
     console.log(
       '\n=== ALL ACTIVITY FEED TESTS PASSED ==='
     );
@@ -248,6 +264,9 @@ async function runTests() {
       '\n*** ACTIVITY FEED TEST FAILED ***'
     );
     console.error(err.message);
+    if (mongoose.connection.readyState !== 0) {
+      await mongoose.connection.close();
+    }
   }
 }
 

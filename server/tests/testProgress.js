@@ -1,3 +1,10 @@
+const mongoose = require('mongoose');
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
+
+const Project = require('../src/models/Project');
+const ProgressLog = require('../src/models/progressLog');
+
 const PORT = process.env.PORT || 5000;
 const BASE_URL = `http://localhost:${PORT}/api`;
 
@@ -13,8 +20,6 @@ async function login(email, password) {
   return res.json();
 }
 
-// Small helper so our two log entries don't land in the exact same millisecond —
-// makes the "sorted descending" check meaningful and unambiguous.
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -65,8 +70,7 @@ async function runTests() {
     const log1 = await log1Res.json();
     console.log('First log created:', log1.description);
 
-    await wait(1500); // ensure a clearly later timestamp for the second entry
-
+    await wait(1500);
     console.log('\n4. Adding second progress log entry...');
     const log2Res = await fetch(`${BASE_URL}/progress`, {
       method: 'POST',
@@ -114,10 +118,20 @@ async function runTests() {
     }
     console.log('PASSED: userId populated as:', history[0].userId);
 
+    console.log('\n8. Cleaning up test data from DB...');
+    await mongoose.connect(process.env.MONGODB_URI);
+    await ProgressLog.deleteMany({ projectId });
+    await Project.findByIdAndDelete(projectId);
+    await mongoose.connection.close();
+    console.log('Database cleanup complete.');
+
     console.log('\n--- All Progress Log API tests PASSED ---');
   } catch (error) {
     console.error('\n*** API Validation Test FAILED ***');
     console.error(error.message);
+    if (mongoose.connection.readyState !== 0) {
+      await mongoose.connection.close();
+    }
   }
 }
 
