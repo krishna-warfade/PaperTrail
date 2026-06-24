@@ -1,8 +1,5 @@
-const mongoose = require('mongoose');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
-
-const Project = require('../src/models/Project');
 
 const PORT = process.env.PORT || 5000;
 const BASE_URL = `http://localhost:${PORT}/api`;
@@ -78,18 +75,23 @@ async function runTests() {
     console.log(`- Leader Email: ${projectDetails.leader.email}`);
     console.log(`- Members Count: ${projectDetails.members.length}`);
 
-    console.log('\n5. Cleaning up test project from DB...');
-    await mongoose.connect(process.env.MONGODB_URI);
-    await Project.findByIdAndDelete(projectId);
-    await mongoose.connection.close();
-    console.log('Database cleanup complete.');
+    console.log('\n5. Cleaning up test project via API...');
+    const deleteRes = await fetch(`${BASE_URL}/projects/${projectId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    if (!deleteRes.ok) {
+      throw new Error(`Delete project via API failed: ${deleteRes.status} ${await deleteRes.text()}`);
+    }
+
+    const deleteData = await deleteRes.json();
+    console.log('Delete response:', deleteData.message);
+    console.log('API-based project cleanup complete.');
 
   } catch (error) {
     console.error('\n*** API Validation Test FAILED ***');
     console.error(error.message);
-    if (mongoose.connection.readyState !== 0) {
-      await mongoose.connection.close();
-    }
   }
 }
 
