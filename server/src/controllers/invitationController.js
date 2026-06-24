@@ -30,7 +30,8 @@ const sendInvitation = async (req, res) => {
       token,
     });
 
-    const inviteLink = `${process.env.CLIENT_URL}/accept-invite?token=${token}`;
+    const clientUrl = process.env.CLIENT_URL || `${req.headers['x-forwarded-proto'] || req.protocol}://${req.get('host')}`;
+    const inviteLink = `${clientUrl}/accept-invite?token=${token}`;
 
     await sendMail(
       email,

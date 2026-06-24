@@ -34,7 +34,7 @@ exports.getProjectActivity = async (req, res) => {
       },
       {
         $unionWith: {
-          coll: 'papers',
+          coll: 'paper',
           pipeline: [
             { $match: { projectId: projectObjectId } },
             {

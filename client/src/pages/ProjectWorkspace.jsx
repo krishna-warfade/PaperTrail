@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import {
@@ -13,6 +13,7 @@ import {
 export default function ProjectWorkspace() {
   const { id: projectId } = useParams();
   const navigate = useNavigate();
+  const { fetchProjects } = useOutletContext();
   const { user, apiFetch } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
@@ -190,6 +191,32 @@ export default function ProjectWorkspace() {
       }
     } catch (err) {
       alert('Network error. Failed to remove member.');
+    }
+  };
+
+  const handleDeleteProject = async () => {
+    if (!window.confirm('WARNING: Are you sure you want to delete this project? This will permanently remove all related papers, discussion notes, progress logs, and comments. This action cannot be undone.')) return;
+
+    const confirmText = window.prompt('Please type "DELETE" to confirm project deletion:');
+    if (confirmText !== 'DELETE') {
+      alert('Project deletion cancelled.');
+      return;
+    }
+
+    try {
+      const res = await apiFetch(`/api/projects/${projectId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        alert('Project deleted successfully.');
+        await fetchProjects();
+        navigate('/');
+      } else {
+        const data = await res.json();
+        alert(data.message || 'Failed to delete project.');
+      }
+    } catch (err) {
+      alert('Network error. Failed to delete project.');
     }
   };
 
@@ -581,12 +608,24 @@ export default function ProjectWorkspace() {
               {project?.description}
             </p>
           </div>
-          {project?.faculty && (
-            <div className="shrink-0 flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1.5 rounded-lg text-xs font-bold text-indigo-650 dark:text-indigo-405 self-start md:self-auto">
-              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse animate-fadeIn"></span>
-              Guide: {project.faculty.name}
-            </div>
-          )}
+          <div className="shrink-0 flex items-center gap-3 self-start md:self-auto">
+            {project?.faculty && (
+              <div className="flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1.5 rounded-lg text-xs font-bold text-indigo-650 dark:text-indigo-405">
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse animate-fadeIn"></span>
+                Guide: {project.faculty.name}
+              </div>
+            )}
+            {(isLeader || isFaculty) && (
+              <button
+                onClick={handleDeleteProject}
+                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-200 dark:border-red-900/30 bg-red-50 dark:bg-red-955/20 text-red-655 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-955/40 transition-all cursor-pointer shadow-sm shrink-0"
+                title="Delete Project"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete Project
+              </button>
+            )}
+          </div>
         </div>
 
       </div>

@@ -1,5 +1,9 @@
 const Project = require('../models/Project');
 const Paper = require('../models/Paper');
+const Note = require('../models/Note');
+const Comment = require('../models/comment');
+const ProgressLog = require('../models/progressLog');
+const Invitation = require('../models/Invitation');
 
 const createProject = async (req, res) => {
   try {
@@ -107,9 +111,49 @@ const removeMember = async (req, res) => {
   }
 };
 
+const deleteProject = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const project = await Project.findById(id);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    const isLeader = project.leader.toString() === req.user._id.toString();
+    const isFaculty = project.faculty && project.faculty.toString() === req.user._id.toString();
+
+    if (!isLeader && !isFaculty) {
+      return res.status(403).json({ message: 'Only the project leader or faculty guide can delete the project' });
+    }
+
+    const papers = await Paper.find({ projectId: id });
+    const paperIds = papers.map((p) => p._id);
+
+    if (paperIds.length > 0) {
+      await Note.deleteMany({ paperId: { $in: paperIds } });
+    }
+
+    await Paper.deleteMany({ projectId: id });
+
+    await Comment.deleteMany({ projectId: id });
+
+    await ProgressLog.deleteMany({ projectId: id });
+
+    await Invitation.deleteMany({ projectId: id });
+
+    await Project.findByIdAndDelete(id);
+
+    res.status(200).json({ message: 'Project and all related data deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   createProject,
   getProjects,
   getProjectById,
-  removeMember
+  removeMember,
+  deleteProject
 };
