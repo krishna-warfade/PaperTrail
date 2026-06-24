@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Outlet, NavLink, useNavigate, useParams, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { 
-  Shield, Folder, FolderOpen, Plus, Sun, Moon, LogOut, 
-  User, CheckCircle, AlertCircle, X, ShieldAlert 
+import {
+  Shield, Folder, FolderOpen, Plus, Sun, Moon, LogOut,
+  AlertCircle, X, ShieldAlert, Menu
 } from 'lucide-react';
 
 export default function PortalLayout() {
@@ -18,12 +18,17 @@ export default function PortalLayout() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Create Project Modal States
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [createError, setCreateError] = useState('');
   const [creating, setCreating] = useState(false);
+
+  useEffect(() => {
+    setIsMobileSidebarOpen(false);
+  }, [location.pathname]);
 
   const fetchProjects = async () => {
     try {
@@ -63,7 +68,6 @@ export default function PortalLayout() {
         setIsModalOpen(false);
         setNewTitle('');
         setNewDesc('');
-        // Navigate to the newly created project
         navigate(`/project/${data._id}`);
       } else {
         setCreateError(data.message || 'Failed to create project');
@@ -80,13 +84,189 @@ export default function PortalLayout() {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
+  const sidebarContent = (isExpanded) => (
+    <>
+      <div className={`flex items-center ${isExpanded ? 'justify-start' : 'justify-center md-hover:justify-start'} gap-2.5 px-4 py-5 border-b border-slate-101 dark:border-slate-800/60 shrink-0 overflow-hidden`}>
+        <Link to="/" className={`flex items-center ${isExpanded ? 'justify-start' : 'justify-center'} gap-2.5`}>
+          <div className="w-8 h-8 bg-indigo-650 dark:bg-indigo-650 rounded-lg flex items-center justify-center shadow-md shadow-indigo-600/15 shrink-0">
+            <Shield className="w-4.5 h-4.5 text-white" />
+          </div>
+          {isExpanded && (
+            <span className="font-outfit text-xl font-bold tracking-tight text-slate-905 dark:text-white whitespace-nowrap">
+              Paper<span className="text-indigo-650 dark:text-indigo-400">Trail</span>
+            </span>
+          )}
+        </Link>
+      </div>
+
+      <div className="flex-grow overflow-y-auto flex flex-col pt-4 overflow-hidden">
+
+        {isExpanded && (
+          <div className="flex items-center justify-between px-4 mb-2 shrink-0">
+            <span className="font-outfit text-[10px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-widest whitespace-nowrap">
+              My Projects
+            </span>
+            {user?.role === 'LEADER' && (
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-450 dark:text-slate-500 hover:text-indigo-650 dark:hover:text-indigo-400 rounded transition-colors cursor-pointer shrink-0"
+                title="Create New Project"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        )}
+
+        {loading ? (
+          <div className={`px-5 py-4 flex items-center ${isExpanded ? 'justify-start' : 'justify-center'} gap-2 text-xs text-slate-400`}>
+            <div className="w-3.5 h-3.5 rounded-full border-2 border-slate-300 dark:border-slate-700 border-t-indigo-600 animate-spin shrink-0"></div>
+            {isExpanded && <span className="whitespace-nowrap">Loading...</span>}
+          </div>
+        ) : error ? (
+          <div className={`px-5 py-3 text-[10px] text-red-550 bg-red-50 dark:bg-red-955/20 border-y border-red-100 dark:border-red-900/30 flex items-center ${isExpanded ? 'justify-start' : 'justify-center'} gap-1.5 overflow-hidden`}>
+            <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
+            {isExpanded && <span className="truncate">{error}</span>}
+          </div>
+        ) : projects.length === 0 ? (
+          isExpanded && (
+            <div className="px-5 py-4 text-xs text-slate-455 italic whitespace-nowrap">
+              No projects.
+            </div>
+          )
+        ) : (
+          <nav className="px-2 space-y-1.5 overflow-y-auto">
+            {projects.map((project) => {
+              const isActive = activeProjectId === project._id;
+              return (
+                <NavLink
+                  key={project._id}
+                  to={`/project/${project._id}`}
+                  className={({ isActive }) => `
+                    flex items-center ${isExpanded ? 'justify-between w-full h-auto py-2 px-3.5 mx-0' : 'justify-center w-8 h-8 p-0 mx-auto'} rounded-lg text-xs font-semibold tracking-wide transition-all duration-150 cursor-pointer overflow-hidden
+                    ${isActive
+                      ? `bg-indigo-50 dark:bg-indigo-955/40 text-indigo-600 dark:text-indigo-400 ${isExpanded ? 'border-l-2' : ''} border-indigo-600 dark:border-indigo-400`
+                      : `text-slate-650 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-850/50 hover:text-slate-900 dark:hover:text-white ${isExpanded ? 'border-l-2' : ''} border-transparent`
+                    }
+                  `}
+                >
+                  <div className={`flex items-center ${isExpanded ? 'justify-start gap-2.5' : 'justify-center gap-0'} min-w-0 flex-1`}>
+                    {isActive ? (
+                      <FolderOpen className="w-4 h-4 shrink-0 text-indigo-600 dark:text-indigo-400" />
+                    ) : (
+                      <Folder className="w-4 h-4 shrink-0 text-slate-400 dark:text-slate-500" />
+                    )}
+                    {isExpanded && <span className="whitespace-normal break-words flex-1 text-left">{project.title}</span>}
+                  </div>
+                  {isExpanded && project.paperCount > 0 && (
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold shrink-0 ml-2 ${isActive
+                        ? 'bg-indigo-100 dark:bg-indigo-900/45 text-indigo-700 dark:text-indigo-300'
+                        : 'bg-slate-100 dark:bg-slate-805 text-slate-500'
+                      }`}>
+                      {project.paperCount}
+                    </span>
+                  )}
+                </NavLink>
+              );
+            })}
+          </nav>
+        )}
+      </div>
+
+      <div className={`p-2 border-t border-slate-150 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20 shrink-0 space-y-3 overflow-hidden flex flex-col ${isExpanded ? 'items-stretch' : 'items-center'}`}>
+
+        <div className={`flex items-center ${isExpanded ? 'justify-between p-2 bg-white dark:bg-slate-955 border-slate-200 dark:border-slate-805 shadow-sm' : 'justify-center p-0 bg-transparent border-transparent shadow-none'} rounded-lg border overflow-hidden transition-all duration-200 ${isExpanded ? 'w-full' : 'w-8'}`}>
+          {isExpanded && (
+            <span className="text-[11px] font-bold text-slate-605 dark:text-slate-400 flex items-center gap-1.5 shrink-0">
+              {theme === 'dark' ? <Moon className="w-3.5 h-3.5 text-indigo-400" /> : <Sun className="w-3.5 h-3.5 text-amber-500" />}
+              <span>{theme === 'dark' ? 'Dark Theme' : 'Light Theme'}</span>
+            </span>
+          )}
+          <button
+            onClick={toggleTheme}
+            className="w-8 h-8 flex items-center justify-center bg-white hover:bg-slate-50 dark:bg-slate-950 dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-805 text-slate-700 dark:text-slate-350 rounded-lg shadow-sm hover:shadow transition-all cursor-pointer shrink-0"
+            title="Toggle Theme"
+          >
+            {theme === 'dark' ? <Sun className="w-3.5 h-3.5 text-indigo-400" /> : <Moon className="w-3.5 h-3.5" />}
+          </button>
+        </div>
+
+        <div className={`flex flex-col gap-2 ${isExpanded ? 'p-2 bg-white dark:bg-slate-955 border-slate-205 dark:border-slate-805 shadow-sm items-stretch w-full' : 'p-0 bg-transparent border-transparent shadow-none items-center w-8'} rounded-lg border overflow-hidden transition-all duration-200`}>
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-indigo-500/10 text-indigo-650 dark:text-indigo-400 border border-indigo-500/20 flex items-center justify-center font-bold text-xs shadow-inner shrink-0" title={`${user?.name} (${user?.role})`}>
+              {getInitials(user?.name)}
+            </div>
+            {isExpanded && (
+              <div className="min-w-0 text-left">
+                <p className="text-xs font-bold text-slate-855 dark:text-white truncate whitespace-nowrap">{user?.name}</p>
+                <span className="text-[8px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-655 dark:text-indigo-450 border border-indigo-500/10 mt-0.5 inline-block whitespace-nowrap">
+                  {user?.role}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {isExpanded && (
+            <button
+              onClick={logout}
+              className="w-full mt-1 py-1.5 px-1 bg-slate-50 hover:bg-red-500/5 dark:bg-slate-900 dark:hover:bg-red-955/20 text-slate-500 dark:text-slate-400 hover:text-red-650 dark:hover:text-red-400 border border-slate-205 dark:border-slate-800 hover:border-red-200/50 dark:hover:border-red-900/40 rounded flex items-center justify-center gap-1.5 text-[9px] font-bold tracking-wide transition-all cursor-pointer whitespace-nowrap overflow-hidden"
+            >
+              <LogOut className="w-3.5 h-3.5 shrink-0" />
+              Sign Out
+            </button>
+          )}
+        </div>
+      </div>
+    </>
+  );
+
   return (
-    <div className="h-screen w-screen flex bg-slate-50 dark:bg-slate-955 overflow-hidden transition-colors duration-200">
-      
-      {/* Sidebar Layout */}
-      <aside className="group w-16 hover:w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between h-full shrink-0 transition-all duration-300 ease-in-out z-30 fixed left-0 top-0 shadow-md">
-        
-        {/* Top Branding */}
+    <div className="h-screen w-screen flex flex-col md:flex-row bg-slate-50 dark:bg-slate-955 overflow-hidden transition-colors duration-200">
+
+      <div className="md:hidden flex items-center justify-between px-4 py-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shrink-0 z-30">
+        <button
+          onClick={() => setIsMobileSidebarOpen(true)}
+          className="p-2 -ml-1 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+          aria-label="Open menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
+        <Link to="/" className="flex items-center gap-2">
+          <div className="w-7 h-7 bg-indigo-650 rounded-lg flex items-center justify-center shadow-md shadow-indigo-600/15">
+            <Shield className="w-3.5 h-3.5 text-white" />
+          </div>
+          <span className="font-outfit text-lg font-bold tracking-tight text-slate-905 dark:text-white">
+            Paper<span className="text-indigo-650 dark:text-indigo-400">Trail</span>
+          </span>
+        </Link>
+
+        <div className="w-9" />
+      </div>
+
+      <div
+        className={`md:hidden fixed inset-0 bg-slate-950/60 dark:bg-slate-950/80 backdrop-blur-xs z-40 transition-opacity duration-300 ${isMobileSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+          }`}
+        onClick={() => setIsMobileSidebarOpen(false)}
+      />
+
+      <aside
+        className={`md:hidden fixed inset-y-0 left-0 w-72 max-w-[85vw] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between h-full z-50 shadow-2xl transition-transform duration-300 ease-in-out ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+      >
+        <button
+          onClick={() => setIsMobileSidebarOpen(false)}
+          className="absolute top-4 right-3 p-1.5 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer z-10"
+          aria-label="Close menu"
+        >
+          <X className="w-4 h-4" />
+        </button>
+
+        {sidebarContent(true)}
+      </aside>
+
+      <aside className="group hidden md:flex w-16 hover:w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex-col justify-between h-full shrink-0 transition-all duration-300 ease-in-out z-30 fixed left-0 top-0 shadow-md">
+
         <div className="flex items-center justify-center group-hover:justify-start gap-2.5 px-4 py-5 border-b border-slate-101 dark:border-slate-800/60 shrink-0 overflow-hidden">
           <Link to="/" className="flex items-center justify-center group-hover:justify-start gap-2.5">
             <div className="w-8 h-8 bg-indigo-650 dark:bg-indigo-650 rounded-lg flex items-center justify-center shadow-md shadow-indigo-600/15 shrink-0">
@@ -98,9 +278,8 @@ export default function PortalLayout() {
           </Link>
         </div>
 
-        {/* Sidebar Nav Middle: Projects */}
         <div className="flex-grow overflow-y-auto flex flex-col pt-4 overflow-hidden">
-          
+
           <div className="items-center justify-between px-4 mb-2 shrink-0 hidden group-hover:flex">
             <span className="font-outfit text-[10px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-widest whitespace-nowrap">
               My Projects
@@ -140,8 +319,8 @@ export default function PortalLayout() {
                     to={`/project/${project._id}`}
                     className={({ isActive }) => `
                       flex items-center justify-center group-hover:justify-between w-8 group-hover:w-full h-8 group-hover:h-auto p-0 group-hover:py-2 group-hover:px-3.5 mx-auto group-hover:mx-0 rounded-lg text-xs font-semibold tracking-wide transition-all duration-150 cursor-pointer overflow-hidden
-                      ${isActive 
-                        ? 'bg-indigo-50 dark:bg-indigo-955/40 text-indigo-600 dark:text-indigo-400 group-hover:border-l-2 border-indigo-600 dark:border-indigo-400' 
+                      ${isActive
+                        ? 'bg-indigo-50 dark:bg-indigo-955/40 text-indigo-600 dark:text-indigo-400 group-hover:border-l-2 border-indigo-600 dark:border-indigo-400'
                         : 'text-slate-650 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-850/50 hover:text-slate-900 dark:hover:text-white group-hover:border-l-2 border-transparent'
                       }
                     `}
@@ -155,11 +334,10 @@ export default function PortalLayout() {
                       <span className="hidden group-hover:block whitespace-normal break-words flex-1 text-left">{project.title}</span>
                     </div>
                     {project.paperCount > 0 && (
-                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold hidden group-hover:inline-block shrink-0 ml-2 ${
-                        isActive 
-                          ? 'bg-indigo-100 dark:bg-indigo-900/45 text-indigo-700 dark:text-indigo-300' 
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold hidden group-hover:inline-block shrink-0 ml-2 ${isActive
+                          ? 'bg-indigo-100 dark:bg-indigo-900/45 text-indigo-700 dark:text-indigo-300'
                           : 'bg-slate-100 dark:bg-slate-805 text-slate-500'
-                      }`}>
+                        }`}>
                         {project.paperCount}
                       </span>
                     )}
@@ -170,10 +348,8 @@ export default function PortalLayout() {
           )}
         </div>
 
-        {/* Bottom Section: Settings & User Profile */}
         <div className="p-2 border-t border-slate-150 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20 shrink-0 space-y-3 overflow-hidden flex flex-col items-center group-hover:items-stretch">
-          
-          {/* Theme Settings row */}
+
           <div className="flex items-center justify-center group-hover:justify-between p-0 group-hover:p-2 rounded-lg bg-transparent group-hover:bg-white group-hover:dark:bg-slate-955 border border-transparent group-hover:border-slate-200 group-hover:dark:border-slate-805 shadow-none group-hover:shadow-sm overflow-hidden transition-all duration-200 w-8 group-hover:w-full">
             <span className="text-[11px] font-bold text-slate-605 dark:text-slate-400 hidden group-hover:flex items-center gap-1.5 shrink-0">
               {theme === 'dark' ? <Moon className="w-3.5 h-3.5 text-indigo-400" /> : <Sun className="w-3.5 h-3.5 text-amber-500" />}
@@ -188,7 +364,6 @@ export default function PortalLayout() {
             </button>
           </div>
 
-          {/* User Profile Info Card */}
           <div className="flex flex-col gap-2 p-0 group-hover:p-2 rounded-lg bg-transparent group-hover:bg-white group-hover:dark:bg-slate-955 border border-transparent group-hover:border-slate-205 group-hover:dark:border-slate-805 shadow-none group-hover:shadow-sm overflow-hidden transition-all duration-200 items-center group-hover:items-stretch w-8 group-hover:w-full">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-full bg-indigo-500/10 text-indigo-650 dark:text-indigo-400 border border-indigo-500/20 flex items-center justify-center font-bold text-xs shadow-inner shrink-0" title={`${user?.name} (${user?.role})`}>
@@ -201,7 +376,7 @@ export default function PortalLayout() {
                 </span>
               </div>
             </div>
-            
+
             <button
               onClick={logout}
               className="w-full mt-1 py-1.5 px-1 bg-slate-50 hover:bg-red-500/5 dark:bg-slate-900 dark:hover:bg-red-955/20 text-slate-500 dark:text-slate-400 hover:text-red-650 dark:hover:text-red-400 border border-slate-205 dark:border-slate-800 hover:border-red-200/50 dark:hover:border-red-900/40 rounded flex items-center justify-center gap-1.5 text-[9px] font-bold tracking-wide transition-all cursor-pointer opacity-0 group-hover:opacity-100 group-hover:pointer-events-auto pointer-events-none transition-all duration-350 whitespace-nowrap overflow-hidden h-0 group-hover:h-auto"
@@ -214,12 +389,10 @@ export default function PortalLayout() {
 
       </aside>
 
-      {/* Main Content Pane */}
-      <div className="flex-1 pl-16 h-full overflow-y-auto flex flex-col relative transition-all duration-300">
+      <div className="flex-1 pl-0 md:pl-16 h-full overflow-y-auto flex flex-col relative transition-all duration-300">
         <Outlet context={{ projects, setProjects, fetchProjects, loading, error }} />
       </div>
 
-      {/* Shared Create Project Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-950/60 dark:bg-slate-955/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden relative">
