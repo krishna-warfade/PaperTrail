@@ -71,9 +71,8 @@ export default function Dashboard() {
   const totalCollaborators = uniqueCollaborators.size;
 
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10 dot-grid overflow-y-auto">
-      
-      {/* Background Radial Glows (only in dark mode) */}
+    <div className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8 relative z-10 dot-grid overflow-y-auto">
+
       <div className="hidden dark:block absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-500/5 rounded-full blur-[110px] pointer-events-none"></div>
       <div className="hidden dark:block absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-96 h-96 bg-violet-500/5 rounded-full blur-[110px] pointer-events-none"></div>
 
@@ -86,7 +85,7 @@ export default function Dashboard() {
 
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
         <div>
-          <h1 className="font-outfit text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
+          <h1 className="font-outfit text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
             Research Workspace
           </h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
@@ -105,116 +104,110 @@ export default function Dashboard() {
         )}
       </div>
 
-        {/* Info Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-lg flex items-center gap-4 shadow-sm">
-            <div className="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20 text-indigo-600 dark:text-indigo-400">
-              <Folder className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Total Projects</p>
-              <h3 className="font-outfit text-2xl font-bold text-slate-900 dark:text-white mt-0.5">{projects.length}</h3>
-            </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-lg flex items-center gap-4 shadow-sm">
+          <div className="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20 text-indigo-600 dark:text-indigo-400">
+            <Folder className="w-5 h-5" />
           </div>
-
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-lg flex items-center gap-4 shadow-sm">
-            <div className="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center border border-violet-500/20 text-violet-650 dark:text-violet-400">
-              <Users className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Total Collaborators</p>
-              <h3 className="font-outfit text-2xl font-bold text-slate-900 dark:text-white mt-0.5">{totalCollaborators}</h3>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-lg flex items-center gap-4 shadow-sm">
-            <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
-              <BookOpen className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Shared Documents</p>
-              <h3 className="font-outfit text-2xl font-bold text-slate-900 dark:text-white mt-0.5">{totalPapers}</h3>
-            </div>
+          <div>
+            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Total Projects</p>
+            <h3 className="font-outfit text-2xl font-bold text-slate-900 dark:text-white mt-0.5">{projects.length}</h3>
           </div>
         </div>
 
-        {/* Projects / Empty State */}
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 text-slate-500">
-            <Loader className="w-7 h-7 animate-spin text-indigo-600 dark:text-indigo-400" />
-            <p className="mt-4 font-outfit text-xs text-slate-500 dark:text-slate-400">Syncing research indexes...</p>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-lg flex items-center gap-4 shadow-sm">
+          <div className="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center border border-violet-500/20 text-violet-650 dark:text-violet-400">
+            <Users className="w-5 h-5" />
           </div>
-        ) : projects.length === 0 ? (
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 p-10 sm:p-16 rounded-xl flex flex-col items-center justify-center text-center max-w-2xl mx-auto shadow-sm dark:shadow-xl">
-            <div className="w-14 h-14 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex items-center justify-center mb-6 text-indigo-600 dark:text-indigo-400">
-              <FolderOpen className="w-6 h-6" />
-            </div>
-            <h3 className="font-outfit text-lg font-bold text-slate-800 dark:text-slate-200">No active projects</h3>
-            <p className="text-slate-550 dark:text-slate-400 text-xs mt-2 max-w-sm leading-relaxed">
-              {user?.role === 'LEADER'
-                ? 'Create a research project to begin adding collaborators and managing document archives.'
-                : 'You are not assigned to any projects. Have your guide or lead scientist invite you.'}
-            </p>
-            {user?.role === 'LEADER' && (
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="glow-button mt-6 inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 dark:bg-gradient-to-r dark:from-indigo-600 dark:to-violet-650 dark:hover:from-indigo-500 dark:hover:to-violet-550 text-white font-semibold text-xs px-4 py-2.5 rounded-lg transition-all cursor-pointer shadow-md shadow-indigo-600/10"
-              >
-                <Plus className="w-4 h-4" />
-                Create your first project
-              </button>
-            )}
+          <div>
+            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Total Collaborators</p>
+            <h3 className="font-outfit text-2xl font-bold text-slate-900 dark:text-white mt-0.5">{totalCollaborators}</h3>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {projects.map((proj) => {
-              const projectRole = getUserWorkspaceRole(proj);
-              return (
-                <div
-                  key={proj._id}
-                  onClick={() => navigate(`/project/${proj._id}`)}
-                  className="bg-white/80 dark:bg-slate-950/70 border border-slate-200/80 dark:border-slate-800/80 backdrop-blur-md p-6 rounded-xl flex flex-col justify-between shadow-sm hover:shadow-lg dark:hover:shadow-2xl hover:border-indigo-500/30 dark:hover:border-slate-700/60 transition-all duration-200 relative group cursor-pointer text-left h-full"
-                >
-                  <div className="flex-grow">
-                    {/* Top Row: Title in a green badge + Status/Role on the right */}
-                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4.5">
-                      <div className="bg-emerald-500/10 border border-emerald-500/25 dark:border-emerald-500/35 px-3.5 py-2 rounded-xl text-emerald-650 dark:text-emerald-400 text-sm md:text-base font-medium font-outfit whitespace-normal break-words leading-snug w-fit" title={proj.title}>
-                        {proj.title}
-                      </div>
-                      <span className="bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/20 text-emerald-650 dark:text-emerald-400 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase shrink-0 w-fit">
-                        {projectRole}
-                      </span>
-                    </div>
+        </div>
 
-                    {/* Middle Row: Description */}
-                    <p className="text-slate-600 dark:text-slate-300 text-xs leading-relaxed line-clamp-3 font-medium mb-6">
-                      {proj.description}
-                    </p>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-lg flex items-center gap-4 shadow-sm">
+          <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+            <BookOpen className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Shared Documents</p>
+            <h3 className="font-outfit text-2xl font-bold text-slate-900 dark:text-white mt-0.5">{totalPapers}</h3>
+          </div>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+          <Loader className="w-7 h-7 animate-spin text-indigo-600 dark:text-indigo-400" />
+          <p className="mt-4 font-outfit text-xs text-slate-500 dark:text-slate-400">Syncing research indexes...</p>
+        </div>
+      ) : projects.length === 0 ? (
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 p-10 sm:p-16 rounded-xl flex flex-col items-center justify-center text-center max-w-2xl mx-auto shadow-sm dark:shadow-xl">
+          <div className="w-14 h-14 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex items-center justify-center mb-6 text-indigo-600 dark:text-indigo-400">
+            <FolderOpen className="w-6 h-6" />
+          </div>
+          <h3 className="font-outfit text-lg font-bold text-slate-800 dark:text-slate-200">No active projects</h3>
+          <p className="text-slate-550 dark:text-slate-400 text-xs mt-2 max-w-sm leading-relaxed">
+            {user?.role === 'LEADER'
+              ? 'Create a research project to begin adding collaborators and managing document archives.'
+              : 'You are not assigned to any projects. Have your guide or lead scientist invite you.'}
+          </p>
+          {user?.role === 'LEADER' && (
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="glow-button mt-6 inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 dark:bg-gradient-to-r dark:from-indigo-600 dark:to-violet-650 dark:hover:from-indigo-500 dark:hover:to-violet-550 text-white font-semibold text-xs px-4 py-2.5 rounded-lg transition-all cursor-pointer shadow-md shadow-indigo-600/10"
+            >
+              <Plus className="w-4 h-4" />
+              Create your first project
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {projects.map((proj) => {
+            const projectRole = getUserWorkspaceRole(proj);
+            return (
+              <div
+                key={proj._id}
+                onClick={() => navigate(`/project/${proj._id}`)}
+                className="bg-white/80 dark:bg-slate-950/70 border border-slate-200/80 dark:border-slate-800/80 backdrop-blur-md p-6 rounded-xl flex flex-col justify-between shadow-sm hover:shadow-lg dark:hover:shadow-2xl hover:border-indigo-500/30 dark:hover:border-slate-700/60 transition-all duration-200 relative group cursor-pointer text-left h-full"
+              >
+                <div className="flex-grow">
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4.5">
+                    <div className="bg-emerald-500/10 border border-emerald-500/25 dark:border-emerald-500/35 px-3.5 py-2 rounded-xl text-emerald-650 dark:text-emerald-400 text-sm md:text-base font-medium font-outfit whitespace-normal break-words leading-snug w-fit" title={proj.title}>
+                      {proj.title}
+                    </div>
+                    <span className="bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/20 text-emerald-650 dark:text-emerald-400 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase shrink-0 w-fit">
+                      {projectRole}
+                    </span>
                   </div>
 
-                  {/* Bottom Metadata */}
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400 space-y-1 mt-auto pt-4 border-t border-slate-200/60 dark:border-slate-800/50">
-                    <div className="flex items-center justify-between font-bold">
-                      <span>v1.0 · {new Date(proj.createdAt || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                      {proj.faculty && (
-                        <span className="font-medium text-slate-500 dark:text-slate-400">Guide: {proj.faculty.name}</span>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-between text-slate-655 dark:text-slate-350 pt-1 font-semibold">
-                      <span>Published by {proj.leader.name}</span>
-                      <span className="flex items-center gap-1">
-                        <BookOpen className="w-3 h-3 text-emerald-500" />
-                        {proj.paperCount || 0} Paper(s)
-                      </span>
-                    </div>
+                  <p className="text-slate-600 dark:text-slate-300 text-xs leading-relaxed line-clamp-3 font-medium mb-6">
+                    {proj.description}
+                  </p>
+                </div>
+
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 space-y-1 mt-auto pt-4 border-t border-slate-200/60 dark:border-slate-800/50">
+                  <div className="flex items-center justify-between font-bold">
+                    <span>v1.0 · {new Date(proj.createdAt || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                    {proj.faculty && (
+                      <span className="font-medium text-slate-500 dark:text-slate-400">Guide: {proj.faculty.name}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between text-slate-655 dark:text-slate-350 pt-1 font-semibold">
+                    <span>Published by {proj.leader.name}</span>
+                    <span className="flex items-center gap-1">
+                      <BookOpen className="w-3 h-3 text-emerald-500" />
+                      {proj.paperCount || 0} Paper(s)
+                    </span>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
-      {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div

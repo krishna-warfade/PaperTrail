@@ -5,11 +5,11 @@
 @theme {
   --font-sans: "Inter", sans-serif;
   --font-outfit: "Outfit", sans-serif;
-  
+
   --color-indigo-650: #4f46e5;
   --color-indigo-750: #4338ca;
   --color-slate-955: #090d16;
-  
+
   /* Register custom design token values as variables */
   --color-indigo-150: #e0e7ff;
   --color-indigo-550: #6366f1;
@@ -17,9 +17,9 @@
   --color-indigo-605: #4f46e5;
   --color-indigo-655: #4f46e5;
   --color-indigo-955: #111827;
-  
+
   --color-violet-650: #7c3aed;
-  
+
   --color-slate-105: #f8fafc;
   --color-slate-205: #e2e8f0;
   --color-slate-405: #94a3b8;
@@ -29,18 +29,18 @@
   --color-slate-705: #334155;
   --color-slate-805: #1e293b;
   --color-slate-855: #0f172a;
-  
+
   --color-red-550: #ef4444;
   --color-red-650: #dc2626;
   --color-red-605: #dc2626;
   --color-red-905: #7f1d1d;
   --color-red-955: #450a0a;
-  
+
   --color-emerald-250: #a7f3d0;
   --color-emerald-550: #10b981;
   --color-emerald-650: #059669;
   --color-emerald-955: #064e3b;
-  
+
   --color-amber-405: #fbbf24;
 }
 
@@ -92,6 +92,7 @@ h6 {
   background-color: #ffffff;
   border: 1px solid rgba(148, 163, 184, 0.15);
 }
+
 .dark .border-panel {
   background-color: #0f172a;
   border: 1px solid rgba(99, 102, 241, 0.12);
@@ -103,6 +104,7 @@ h6 {
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
 .dark .flat-card {
   background-color: rgba(15, 23, 42, 0.65);
   border: 1px solid rgba(148, 163, 184, 0.08);
@@ -125,6 +127,7 @@ h6 {
   border: 1px solid rgba(148, 163, 184, 0.15);
   backdrop-filter: blur(12px);
 }
+
 .dark .glass-panel {
   background-color: rgba(15, 23, 42, 0.8);
   border: 1px solid rgba(99, 102, 241, 0.12);
@@ -142,4 +145,36 @@ h6 {
 
 .dark .dot-grid {
   background-image: radial-gradient(rgba(99, 102, 241, 0.05) 1.2px, transparent 1.2px);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideLeft {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.25s ease-out both;
+}
+
+.animate-slideLeft {
+  animation: slideLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
