@@ -61,7 +61,7 @@ const commentSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    replies: [replySchema], // Kept for backward compatibility
+    replies: [replySchema],
     reactions: [reactionSchema],
   },
   { timestamps: true }

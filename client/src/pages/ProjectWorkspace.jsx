@@ -473,7 +473,6 @@ export default function ProjectWorkspace() {
       }
 
       if (res.ok) {
-        // Collect all IDs to remove (the deleted comment and all its recursive descendants)
         const getDescendants = (id) => {
           let descendants = [id];
           comments.forEach(c => {
@@ -621,7 +620,7 @@ export default function ProjectWorkspace() {
       const oldReplies = c.replies ? c.replies.map(r => ({
         ...r,
         parentId: c._id,
-        replies: [], // Initialize empty replies array for nesting under old-style replies
+        replies: [],
       })) : [];
 
       map[c._id] = { 
@@ -629,7 +628,6 @@ export default function ProjectWorkspace() {
         replies: oldReplies
       };
 
-      // Expose old-style replies in the map so they can be referenced as parents by flat replies
       oldReplies.forEach(r => {
         map[r._id] = r;
       });
@@ -770,7 +768,6 @@ export default function ProjectWorkspace() {
               <p className="text-slate-600 dark:text-slate-300 text-xs leading-relaxed font-medium whitespace-pre-wrap">{node.content}</p>
             )}
 
-            {/* Actions Row */}
             {editingCommentId !== node._id && (
               <div className="flex flex-wrap items-center gap-2.5 mt-3 pt-2 border-t border-slate-50 dark:border-slate-850/20">
                 <button
@@ -784,7 +781,6 @@ export default function ProjectWorkspace() {
                   Reply
                 </button>
 
-                {/* Grouped Reactions */}
                 <div className="flex flex-wrap items-center gap-1.5">
                   {getGroupedReactions(node.reactions).map((group) => {
                     const hasReacted = group.userIds.includes(user?._id?.toString());
@@ -800,11 +796,9 @@ export default function ProjectWorkspace() {
                         <span>{group.emoji}</span>
                         <span>{group.count}</span>
 
-                        {/* Custom Styled Tooltip */}
                         {group.names.length > 0 && (
                           <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-slate-900 dark:bg-slate-800 text-white dark:text-slate-200 text-[9px] font-semibold px-2.5 py-1 rounded shadow-md whitespace-nowrap z-50 pointer-events-none animate-fadeIn border border-slate-800 dark:border-slate-700">
                             {group.names.join(', ')}
-                            {/* Arrow */}
                             <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900 dark:border-t-slate-800"></div>
                           </div>
                         )}
@@ -812,7 +806,6 @@ export default function ProjectWorkspace() {
                     );
                   })}
 
-                  {/* Add Reaction Button */}
                   <div className="relative">
                     <button
                       onClick={() => {
@@ -875,7 +868,6 @@ export default function ProjectWorkspace() {
           </div>
         </div>
 
-        {/* Recursive Nested Replies Thread */}
         {node.replies && node.replies.length > 0 && (
           <div className="pl-4 sm:pl-6 border-l border-slate-100 dark:border-slate-800/80 space-y-4 ml-3.5 sm:ml-4">
             {node.replies.map((childReply) => renderCommentNode(childReply, depth + 1))}
@@ -1625,7 +1617,6 @@ export default function ProjectWorkspace() {
                                   {dateStr}
                                 </span>
 
-                                {/* Add Reaction Button besides the timestamp */}
                                 <div className="relative border-l border-slate-100 dark:border-slate-800 pl-2.5">
                                   <button
                                     onClick={() => {
@@ -1654,7 +1645,6 @@ export default function ProjectWorkspace() {
                                   )}
                                 </div>
 
-                                {/* Edit Button for Author */}
                                 {isAuthor && (
                                   <div className="flex items-center border-l border-slate-100 dark:border-slate-800 pl-2.5">
                                     <button
@@ -1700,7 +1690,6 @@ export default function ProjectWorkspace() {
                               <p className="text-slate-600 dark:text-slate-305 text-xs leading-relaxed font-medium whitespace-pre-wrap">{log.description}</p>
                             )}
 
-                             {/* Reactions Section */}
                              {log.reactions && log.reactions.length > 0 && (
                                <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-2.5 border-t border-slate-50 dark:border-slate-850/20 animate-fadeIn">
                                  {getGroupedReactions(log.reactions).map((group) => {
@@ -1717,11 +1706,9 @@ export default function ProjectWorkspace() {
                                        <span>{group.emoji}</span>
                                        <span>{group.count}</span>
 
-                                       {/* Custom Styled Tooltip */}
                                        {group.names.length > 0 && (
                                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-slate-900 dark:bg-slate-800 text-white dark:text-slate-200 text-[9px] font-semibold px-2.5 py-1 rounded shadow-md whitespace-nowrap z-50 pointer-events-none animate-fadeIn border border-slate-800 dark:border-slate-700">
                                            {group.names.join(', ')}
-                                           {/* Arrow */}
                                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900 dark:border-t-slate-800"></div>
                                          </div>
                                        )}
@@ -1946,7 +1933,6 @@ export default function ProjectWorkspace() {
 
                   return (
                     <div key={activity._id} className="relative animate-fadeIn">
-                      {/* Timeline Circle */}
                       <div className="absolute -left-10 top-0.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800/80 w-8 h-8 rounded-full flex items-center justify-center z-10 shadow-sm">
                         {typeIcon}
                       </div>

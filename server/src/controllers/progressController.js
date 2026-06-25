@@ -9,7 +9,6 @@ exports.addProgressLog = async (req, res) => {
       return res.status(400).json({ message: 'projectId and description are required' });
     }
 
-    // Check project authorization
     const project = await Project.findById(projectId);
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
@@ -27,7 +26,7 @@ exports.addProgressLog = async (req, res) => {
       projectId,
       userId: req.user._id,
       description,
-      date: Date.now(), // Always use current server timestamp to prevent tampering
+      date: Date.now(),
     });
 
     return res.status(201).json(log);
@@ -40,7 +39,6 @@ exports.getProjectProgress = async (req, res) => {
   try {
     const { projectId } = req.params;
 
-    // Check project authorization
     const project = await Project.findById(projectId);
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
@@ -79,7 +77,6 @@ exports.reactToProgress = async (req, res) => {
       return res.status(404).json({ message: 'Progress log not found' });
     }
 
-    // Check project authorization
     const project = await Project.findById(log.projectId);
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
@@ -142,7 +139,7 @@ exports.editProgressLog = async (req, res) => {
 
     log.description = description;
     log.isEdited = true;
-    log.date = Date.now(); // Update timestamp to the edit time
+    log.date = Date.now();
     await log.save();
 
     const populatedLog = await ProgressLog.findById(log._id)

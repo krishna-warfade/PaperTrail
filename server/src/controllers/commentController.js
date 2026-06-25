@@ -9,7 +9,6 @@ exports.addComment = async (req, res) => {
       return res.status(400).json({ message: 'projectId and content are required' });
     }
 
-    // Check project authorization
     const project = await Project.findById(projectId);
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
@@ -42,7 +41,6 @@ exports.getProjectComments = async (req, res) => {
   try {
     const { projectId } = req.params;
 
-    // Check project authorization
     const project = await Project.findById(projectId);
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
@@ -56,10 +54,9 @@ exports.getProjectComments = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to view comments for this project' });
     }
 
-    // Fetch all comments and replies in a flat list
     const comments = await Comment.find({ projectId })
       .populate('authorId', 'name role')
-      .populate('replies.authorId', 'name role') // Kept for backward compatibility
+      .populate('replies.authorId', 'name role')
       .populate('reactions.userId', 'name')
       .sort({ createdAt: -1 });
 
@@ -157,12 +154,10 @@ exports.deleteComment = async (req, res) => {
       parentComment.replies.pull(commentId);
       await parentComment.save();
       
-      // Recursively delete any flat replies that have parentId set to this old-style reply
       await deleteCommentAndReplies(commentId);
       
       return res.status(200).json({ message: 'Reply deleted successfully', commentId });
     } else {
-      // Recursively delete this comment and all its replies
       await deleteCommentAndReplies(commentId);
       return res.status(200).json({ message: 'Comment and all replies deleted successfully', commentId });
     }
@@ -173,7 +168,7 @@ exports.deleteComment = async (req, res) => {
 
 exports.addReply = async (req, res) => {
   try {
-    const { commentId } = req.params; // Parent comment ID
+    const { commentId } = req.params;
     const { content } = req.body;
 
     if (!content) {
@@ -186,7 +181,6 @@ exports.addReply = async (req, res) => {
     if (parentComment) {
       projectId = parentComment.projectId;
     } else {
-      // Check if it's an old-style reply subdocument
       const topLevelComment = await Comment.findOne({ 'replies._id': commentId });
       if (!topLevelComment) {
         return res.status(404).json({ message: 'Parent comment not found' });
@@ -195,7 +189,6 @@ exports.addReply = async (req, res) => {
       projectId = topLevelComment.projectId;
     }
 
-    // Check project authorization
     const project = await Project.findById(projectId);
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
@@ -209,7 +202,6 @@ exports.addReply = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to reply to comments in this project' });
     }
 
-    // Create the reply as a separate Comment document
     const reply = await Comment.create({
       projectId,
       authorId: req.user._id,
@@ -248,7 +240,6 @@ exports.reactToComment = async (req, res) => {
       isOldStyleReply = true;
     }
 
-    // Check project authorization
     const project = await Project.findById(parentComment ? parentComment.projectId : comment.projectId);
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
