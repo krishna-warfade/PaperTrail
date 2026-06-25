@@ -664,7 +664,13 @@ export default function ProjectWorkspace() {
 
   const renderCommentNode = (node, depth = 0) => {
     const name = node.authorId?.name || 'Researcher';
-    const role = node.authorId?.role || 'MEMBER';
+    const authorId = node.authorId?._id || node.authorId;
+    let role = 'MEMBER';
+    if (project?.leader?._id === authorId || project?.leader === authorId) {
+      role = 'LEADER';
+    } else if (project?.faculty?._id === authorId || project?.faculty === authorId) {
+      role = 'FACULTY';
+    }
     const initials = name.slice(0, 2).toUpperCase();
     const timeStr = new Date(node.isEdited ? node.updatedAt : node.createdAt).toLocaleDateString(undefined, {
       year: 'numeric',
@@ -1580,6 +1586,21 @@ export default function ProjectWorkspace() {
                       });
                       const isAuthor = log.userId?._id === user?._id || log.userId === user?._id;
 
+                      const logAuthorId = log.userId?._id || log.userId;
+                      let logRole = 'MEMBER';
+                      if (project?.leader?._id === logAuthorId || project?.leader === logAuthorId) {
+                        logRole = 'LEADER';
+                      } else if (project?.faculty?._id === logAuthorId || project?.faculty === logAuthorId) {
+                        logRole = 'FACULTY';
+                      }
+
+                      let logRoleBadgeColor = 'bg-emerald-500/10 text-emerald-650 dark:text-emerald-400 border-emerald-500/20';
+                      if (logRole === 'LEADER') {
+                        logRoleBadgeColor = 'bg-indigo-500/10 text-indigo-650 dark:text-indigo-400 border-indigo-500/20';
+                      } else if (logRole === 'FACULTY') {
+                        logRoleBadgeColor = 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20';
+                      }
+
                       return (
                         <div key={log._id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 p-5 rounded-lg shadow-sm flex items-start gap-4 animate-fadeIn">
                           <div className="w-9 h-9 rounded-lg bg-slate-50 dark:bg-slate-955 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold border border-indigo-500/20 shrink-0 text-xs">
@@ -1587,8 +1608,11 @@ export default function ProjectWorkspace() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 animate-fadeIn">
                                 <h4 className="text-sm font-semibold text-slate-855 dark:text-white truncate">{name}</h4>
+                                <span className={`text-[8px] px-1.5 py-0.5 font-bold tracking-wider rounded border ${logRoleBadgeColor}`}>
+                                  {logRole}
+                                </span>
                                 {log.isEdited && (
                                   <span className="text-[8px] text-indigo-500 dark:text-indigo-400 font-bold bg-indigo-500/5 px-1.5 py-0.5 rounded border border-indigo-500/10 uppercase tracking-wider select-none animate-fadeIn">
                                     Edited
