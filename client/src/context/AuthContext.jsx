@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 const AuthContext = createContext(null);
 
@@ -7,7 +7,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [token, setTokenState] = useState(localStorage.getItem('token') || '');
 
-  const setToken = (newToken) => {
+  const setToken = useCallback((newToken) => {
     if (newToken) {
       localStorage.setItem('token', newToken);
       setTokenState(newToken);
@@ -18,9 +18,9 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       setLoading(false);
     }
-  };
+  }, []);
 
-  const apiFetch = async (url, options = {}) => {
+  const apiFetch = useCallback(async (url, options = {}) => {
     const headers = {
       'Content-Type': 'application/json',
       ...options.headers,
@@ -40,9 +40,9 @@ export const AuthProvider = ({ children }) => {
     }
 
     return response;
-  };
+  }, [token, setToken]);
 
-  const fetchProfile = async (currentToken) => {
+  const fetchProfile = useCallback(async (currentToken) => {
     try {
       const res = await fetch('/api/auth/me', {
         headers: {
@@ -62,7 +62,7 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [setToken]);
 
   useEffect(() => {
     if (token) {
@@ -70,7 +70,7 @@ export const AuthProvider = ({ children }) => {
     } else {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, fetchProfile]);
 
   const login = async (email, password) => {
     setLoading(true);

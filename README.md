@@ -6,17 +6,16 @@ PaperTrail is a centralized workspace designed for student research teams and fa
 
 ### Roles
 * **Leader**: Create research projects, invite team members, invite faculty guides, and manage tasks.
-* **Member**: Upload research papers, add reference notes, and log project progress.
-* **Faculty Guide**: Review team progress logs, add suggestions, and comment on document submissions.
+* **Member**: Upload research papers, add reference notes, log project progress, and participate in discussions.
+* **Faculty Guide**: Review team progress logs, add suggestions/comments, and comment on document submissions.
 
 ### Core Workflow
 1. Leader registers and creates a project.
 2. Leader invites members and faculty guides via email.
 3. Invitees accept the invitation to join the project workspace.
-4. Team members upload relevant research papers and write notes.
-5. Team members record daily or weekly progress logs.
-6. Faculty guides review the progress logs and leave feedback or comments.
-7. The project dashboard visualizes the active timeline, documents, and comments.
+4. Team members upload relevant research papers, write notes, and log project progress.
+5. Faculty guides review the progress logs and leave suggestions or comments.
+6. The project dashboard visualizes the active timeline (activity feed), documents, progress log contributions, and project comments.
 
 ---
 
@@ -26,6 +25,7 @@ PaperTrail is a centralized workspace designed for student research teams and fa
 * React
 * Tailwind CSS
 * React Router
+* Lucide React Icons
 
 ### Backend
 * Node.js
@@ -52,17 +52,26 @@ The application uses an MVC (Model-View-Controller) architecture on the backend 
 ### Directory Structure
 ```text
 PaperTrail/
-├── server/
+├── client/                     # Frontend React application
 │   ├── src/
-│   │   ├── config/             # Connection configurations (database)
-│   │   ├── controllers/        # Express request handlers containing business logic
-│   │   ├── middlewares/        # Authentication and authorization middlewares
-│   │   ├── models/             # Mongoose schemas (User, Project)
-│   │   └── routes/             # REST API endpoint route definitions
-│   ├── tests/                  # Test scripts
-│   ├── server.js               # Express application entry point
+│   │   ├── components/         # Shared React components (PortalLayout, etc.)
+│   │   ├── context/            # Auth and Theme React Contexts
+│   │   ├── pages/              # Frontend pages (Dashboard, ProjectWorkspace, Login, etc.)
+│   │   └── index.css
+│   ├── package.json
+│   └── vite.config.js
+├── server/                     # Backend Node.js / Express application
+│   ├── src/
+│   │   ├── config/             # DB, Mailer, and Cloudinary configurations
+│   │   ├── controllers/        # Business logic handlers
+│   │   ├── middlewares/        # Auth & Upload middlewares
+│   │   ├── models/             # Mongoose schemas (User, Project, Paper, Note, Comment, ProgressLog, Invitation)
+│   │   └── routes/             # Express API route endpoints
+│   ├── tests/                  # Integration tests and utility scripts
+│   ├── server.js               # Backend entry point
 │   ├── package.json
 │   └── .env
+├── vercel.json                 # Monorepo Vercel deployment configuration
 └── README.md
 ```
 
@@ -70,6 +79,11 @@ PaperTrail/
 
 * **User**: name, email, password (hashed), role (LEADER, MEMBER, FACULTY)
 * **Project**: title, description, leader (Ref: User), faculty (Ref: User), members (Ref: User Array)
+* **Paper**: title, authors, year, keywords, projectId (Ref: Project), uploadedBy (Ref: User), pdfUrl
+* **Note**: paperId (Ref: Paper), authorId (Ref: User), content
+* **Invitation**: email, projectId (Ref: Project), role, token, status (PENDING, ACCEPTED, REJECTED)
+* **ProgressLog**: projectId (Ref: Project), userId (Ref: User), description, date
+* **Comment**: projectId (Ref: Project), authorId (Ref: User), content
 
 ---
 
@@ -83,11 +97,51 @@ PaperTrail/
 | GET    | `/me`       | Get current user profile     | Yes           |
 
 ### Projects (`/api/projects`)
-| Method | Route  | Description                          | Auth Required | Role Required |
-|--------|--------|--------------------------------------|---------------|---------------|
-| POST   | `/`    | Create a new project                 | Yes           | LEADER        |
-| GET    | `/`    | Get all projects for current user    | Yes           | Any           |
-| GET    | `/:id` | Get a specific project by ID         | Yes           | Any (member)  |
+| Method | Route                         | Description                          | Auth Required | Role Required |
+|--------|-------------------------------|--------------------------------------|---------------|---------------|
+| POST   | `/`                           | Create a new project                 | Yes           | LEADER        |
+| GET    | `/`                           | Get all projects for current user    | Yes           | Any           |
+| GET    | `/:id`                        | Get a specific project by ID         | Yes           | Any (member)  |
+| DELETE | `/:projectId/members/:memberId`| Remove a member from the project     | Yes           | LEADER/FACULTY|
+
+### Invitations (`/api/invitations`)
+| Method | Route             | Description                          | Auth Required | Role Required |
+|--------|-------------------|--------------------------------------|---------------|---------------|
+| POST   | `/`               | Send project invitation email        | Yes           | LEADER        |
+| POST   | `/accept`         | Accept project invitation            | Yes           | Any           |
+| GET    | `/verify/:token`  | Verify invitation token status       | No            | Any           |
+
+### Papers (`/api/papers`)
+| Method | Route                 | Description                          | Auth Required |
+|--------|-----------------------|--------------------------------------|---------------|
+| POST   | `/`                   | Upload a new PDF paper to project    | Yes           |
+| GET    | `/project/:projectId` | Fetch all papers for a project       | Yes           |
+| DELETE | `/:id`                | Delete a paper (and Cloudinary asset)| Yes           |
+
+### Paper Notes (`/api/notes`)
+| Method | Route               | Description                          | Auth Required |
+|--------|---------------------|--------------------------------------|---------------|
+| POST   | `/`                 | Add note to a paper                  | Yes           |
+| GET    | `/paper/:paperId`   | Get all notes for a specific paper   | Yes           |
+| PUT    | `/:id`              | Update an existing note (author only)| Yes           |
+| DELETE | `/:id`              | Delete a note (author or project lead)| Yes          |
+
+### Progress Logs (`/api/progress`)
+| Method | Route                 | Description                          | Auth Required |
+|--------|-----------------------|--------------------------------------|---------------|
+| POST   | `/`                   | Add a new progress log entry         | Yes           |
+| GET    | `/project/:projectId` | Fetch progress logs for a project    | Yes           |
+
+### Project Comments (`/api/comments`)
+| Method | Route                 | Description                          | Auth Required |
+|--------|-----------------------|--------------------------------------|---------------|
+| POST   | `/`                   | Add a new project comment            | Yes           |
+| GET    | `/project/:projectId` | Fetch project comments               | Yes           |
+
+### Activity Feed (`/api/activity`)
+| Method | Route                 | Description                          | Auth Required |
+|--------|-----------------------|--------------------------------------|---------------|
+| GET    | `/project/:projectId` | Fetch combined project activity feed | Yes           |
 
 ---
 
@@ -111,6 +165,7 @@ PaperTrail/
    MONGODB_URI=your_mongodb_connection_string
    JWT_SECRET=your_jwt_secret_key
    JWT_EXPIRES_IN=7d
+   CLIENT_URL=http://localhost:3000
 
    EMAIL_USER=your_email_address
    EMAIL_PASSWORD=your_email_app_password
@@ -120,13 +175,50 @@ PaperTrail/
    CLOUDINARY_API_SECRET=your_cloudinary_api_secret
    ```
 
-3. **Install dependencies inside the server directory**:
-   ```bash
-   cd server
-   npm install
-   ```
+3. **Install Dependencies**:
+   - Inside the **server** directory:
+     ```bash
+     cd server
+     npm install
+     ```
+   - Inside the **client** directory:
+     ```bash
+     cd client
+     npm install
+     ```
 
-4. **Run the server in development mode**:
-   ```bash
-   npm run dev
-   ```
+4. **Run the Application locally**:
+   - Start the **backend** server:
+     ```bash
+     cd server
+     npm run dev
+     ```
+   - Start the **frontend** development server:
+     ```bash
+     cd client
+     npm run dev
+     ```
+
+---
+
+## Testing & DB Utilities
+
+All integration tests are placed in the `server/tests/` directory. They dynamically resolve server configurations using your `.env` variables.
+
+- **Run all integration tests**:
+  Ensure the server is running locally on port 5000, then execute:
+  ```bash
+  node tests/testProjects.js
+  node tests/testInvitations.js
+  node tests/testPapers.js
+  node tests/testNotes.js
+  node tests/testProgress.js
+  node tests/testComment.js
+  node tests/testActivity.js
+  ```
+
+- **Reset/Clean Test Database**:
+  To purge all automated test projects, progress logs, comments, and temporary users while keeping base accounts intact:
+  ```bash
+  node tests/cleanDb.js
+  ```

@@ -4,7 +4,8 @@ const {
   createProject,
   getProjects,
   getProjectById,
-  removeMember
+  removeMember,
+  deleteProject
 } = require('../controllers/projectController');
 const { verifyToken, authorize } = require('../middlewares/authMiddleware');
 
@@ -17,5 +18,7 @@ router.get('/', getProjects);
 router.get('/:id', getProjectById);
 
 router.delete('/:projectId/members/:memberId', removeMember);
+
+router.delete('/:id', deleteProject);
 
 module.exports = router;
