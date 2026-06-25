@@ -1,5 +1,20 @@
 const mongoose = require('mongoose');
 
+const reactionSchema = new mongoose.Schema(
+  {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    emoji: {
+      type: String,
+      required: true,
+    },
+  },
+  { _id: false }
+);
+
 const progressLogSchema = new mongoose.Schema(
   {
     projectId: {
@@ -21,6 +36,11 @@ const progressLogSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    isEdited: {
+      type: Boolean,
+      default: false,
+    },
+    reactions: [reactionSchema],
   },
   { timestamps: true }
 );
