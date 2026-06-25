@@ -51,12 +51,19 @@ export default function ProjectWorkspace() {
   const [progressLogs, setProgressLogs] = useState([]);
   const [progressLoading, setProgressLoading] = useState(false);
   const [newProgressDesc, setNewProgressDesc] = useState('');
-  const [newProgressDate, setNewProgressDate] = useState('');
+  const [editingProgressId, setEditingProgressId] = useState(null);
+  const [editingProgressDesc, setEditingProgressDesc] = useState('');
   const [selectedMemberFilter, setSelectedMemberFilter] = useState(null);
 
   const [comments, setComments] = useState([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [newCommentContent, setNewCommentContent] = useState('');
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editingCommentContent, setEditingCommentContent] = useState('');
+  const [replyingCommentId, setReplyingCommentId] = useState(null);
+  const [replyContent, setReplyContent] = useState('');
+  const [activeCommentReactionPickerId, setActiveCommentReactionPickerId] = useState(null);
+  const [activeProgressReactionPickerId, setActiveProgressReactionPickerId] = useState(null);
 
   const [activities, setActivities] = useState([]);
   const [activitiesLoading, setActivitiesLoading] = useState(false);
@@ -345,9 +352,6 @@ export default function ProjectWorkspace() {
         projectId,
         description: newProgressDesc,
       };
-      if (newProgressDate) {
-        body.date = newProgressDate;
-      }
       const res = await apiFetch('/api/progress', {
         method: 'POST',
         body: JSON.stringify(body),
@@ -360,12 +364,39 @@ export default function ProjectWorkspace() {
         };
         setProgressLogs([populatedLog, ...progressLogs]);
         setNewProgressDesc('');
-        setNewProgressDate('');
       } else {
         alert(data.message || 'Failed to add progress log');
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleEditProgress = async (progressId, e) => {
+    if (e) e.preventDefault();
+    if (!editingProgressDesc.trim()) return;
+    try {
+      const res = await apiFetch(`/api/progress/${progressId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ description: editingProgressDesc }),
+      });
+
+      let data = {};
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await res.json();
+      }
+
+      if (res.ok) {
+        setProgressLogs(progressLogs.map(p => p._id === progressId ? data : p));
+        setEditingProgressId(null);
+        setEditingProgressDesc('');
+      } else {
+        alert(data.message || `Failed to edit progress log (Status: ${res.status})`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Connection error: Failed to edit progress log. Please ensure the backend server is running.');
     }
   };
 
@@ -379,11 +410,7 @@ export default function ProjectWorkspace() {
       });
       const data = await res.json();
       if (res.ok) {
-        const populatedComment = {
-          ...data,
-          authorId: { _id: user._id, name: user.name, role: user.role }
-        };
-        setComments([populatedComment, ...comments]);
+        setComments([data, ...comments]);
         setNewCommentContent('');
       } else {
         alert(data.message || 'Failed to add comment');
@@ -391,6 +418,463 @@ export default function ProjectWorkspace() {
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const handleEditComment = async (commentId, e) => {
+    if (e) e.preventDefault();
+    if (!editingCommentContent.trim()) return;
+    try {
+      const res = await apiFetch(`/api/comments/${commentId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ content: editingCommentContent }),
+      });
+      
+      let data = {};
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await res.json();
+      }
+
+      if (res.ok) {
+        setComments(comments.map(c => {
+          if (c._id === commentId) {
+            return data;
+          }
+          if (c.replies && c.replies.some(r => r._id === commentId)) {
+            return {
+              ...c,
+              replies: c.replies.map(r => r._id === commentId ? { ...r, ...data } : r)
+            };
+          }
+          return c;
+        }));
+        setEditingCommentId(null);
+        setEditingCommentContent('');
+      } else {
+        alert(data.message || `Failed to edit comment (Status: ${res.status})`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Connection error: Failed to edit comment. Please ensure the backend server is running.');
+    }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    if (!window.confirm('Are you sure you want to delete this comment?')) return;
+    try {
+      const res = await apiFetch(`/api/comments/${commentId}`, {
+        method: 'DELETE',
+      });
+      
+      let data = {};
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await res.json();
+      }
+
+      if (res.ok) {
+        const getDescendants = (id) => {
+          let descendants = [id];
+          comments.forEach(c => {
+            if (c.parentId === id) {
+              descendants = [...descendants, ...getDescendants(c._id)];
+            }
+          });
+          return descendants;
+        };
+        const idsToRemove = getDescendants(commentId);
+
+        setComments(comments
+          .filter(c => !idsToRemove.includes(c._id))
+          .map(c => ({
+            ...c,
+            replies: c.replies ? c.replies.filter(r => !idsToRemove.includes(r._id)) : []
+          }))
+        );
+      } else {
+        alert(data.message || `Failed to delete comment (Status: ${res.status})`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Connection error: Failed to delete comment. Please ensure the backend server is running.');
+    }
+  };
+
+  const handleReplyComment = async (commentId, e) => {
+    if (e) e.preventDefault();
+    if (!replyContent.trim()) return;
+    try {
+      const res = await apiFetch(`/api/comments/${commentId}/reply`, {
+        method: 'POST',
+        body: JSON.stringify({ content: replyContent }),
+      });
+      
+      let data = {};
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await res.json();
+      }
+
+      if (res.ok) {
+        setComments([data, ...comments]);
+        setReplyingCommentId(null);
+        setReplyContent('');
+      } else {
+        alert(data.message || `Failed to post reply (Status: ${res.status})`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Connection error: Failed to post reply. Please ensure the backend server is running.');
+    }
+  };
+
+  const handleReactComment = async (commentId, emoji) => {
+    try {
+      const res = await apiFetch(`/api/comments/${commentId}/react`, {
+        method: 'POST',
+        body: JSON.stringify({ emoji }),
+      });
+      
+      let data = {};
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await res.json();
+      }
+
+      if (res.ok) {
+        setComments(comments.map(c => {
+          if (c._id === commentId) {
+            return data;
+          }
+          if (c.replies && c.replies.some(r => r._id === commentId)) {
+            return {
+              ...c,
+              replies: c.replies.map(r => r._id === commentId ? { ...r, reactions: data.reactions } : r)
+            };
+          }
+          return c;
+        }));
+      } else {
+        alert(data.message || `Failed to react to comment (Status: ${res.status})`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Connection error: Failed to react to comment. Please ensure the backend server is running.');
+    }
+  };
+
+  const handleReactProgress = async (progressId, emoji) => {
+    try {
+      const res = await apiFetch(`/api/progress/${progressId}/react`, {
+        method: 'POST',
+        body: JSON.stringify({ emoji }),
+      });
+      
+      let data = {};
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await res.json();
+      }
+
+      if (res.ok) {
+        setProgressLogs(progressLogs.map(p => p._id === progressId ? data : p));
+      } else {
+        alert(data.message || `Failed to react to progress log (Status: ${res.status})`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Connection error: Failed to react to progress log. Please ensure the backend server is running.');
+    }
+  };
+
+  const getGroupedReactions = (reactions = []) => {
+    const groups = {};
+    reactions.forEach(r => {
+      const emoji = r.emoji;
+      if (!groups[emoji]) {
+        groups[emoji] = {
+          emoji,
+          count: 0,
+          userIds: [],
+          names: [],
+        };
+      }
+      groups[emoji].count += 1;
+      const uId = r.userId?._id || r.userId;
+      const name = r.userId?.name || (r.userId?._id ? 'User' : '');
+      if (uId) {
+        groups[emoji].userIds.push(uId.toString());
+      }
+      if (name) {
+        groups[emoji].names.push(name);
+      }
+    });
+    return Object.values(groups);
+  };
+
+  const buildCommentTree = (flatComments) => {
+    const map = {};
+    const roots = [];
+    
+    flatComments.forEach(c => {
+      const oldReplies = c.replies ? c.replies.map(r => ({
+        ...r,
+        parentId: c._id,
+        replies: [],
+      })) : [];
+
+      map[c._id] = { 
+        ...c, 
+        replies: oldReplies
+      };
+
+      oldReplies.forEach(r => {
+        map[r._id] = r;
+      });
+    });
+    
+    flatComments.forEach(c => {
+      const mapped = map[c._id];
+      if (c.parentId) {
+        const parent = map[c.parentId];
+        if (parent) {
+          if (!parent.replies.some(r => r._id === mapped._id)) {
+            parent.replies.push(mapped);
+          }
+        } else {
+          roots.push(mapped);
+        }
+      } else {
+        roots.push(mapped);
+      }
+    });
+
+    const sortReplies = (node) => {
+      if (node.replies) {
+        node.replies.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+        node.replies.forEach(sortReplies);
+      }
+    };
+    roots.forEach(sortReplies);
+    
+    return roots;
+  };
+
+  const renderCommentNode = (node, depth = 0) => {
+    const name = node.authorId?.name || 'Researcher';
+    const authorId = node.authorId?._id || node.authorId;
+    let role = 'MEMBER';
+    if (project?.leader?._id === authorId || project?.leader === authorId) {
+      role = 'LEADER';
+    } else if (project?.faculty?._id === authorId || project?.faculty === authorId) {
+      role = 'FACULTY';
+    }
+    const initials = name.slice(0, 2).toUpperCase();
+    const timeStr = new Date(node.isEdited ? node.updatedAt : node.createdAt).toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    let roleBadgeColor = 'bg-emerald-500/10 text-emerald-650 dark:text-emerald-400 border-emerald-500/20';
+    if (role === 'LEADER') {
+      roleBadgeColor = 'bg-indigo-500/10 text-indigo-650 dark:text-indigo-400 border-indigo-500/20';
+    } else if (role === 'FACULTY') {
+      roleBadgeColor = 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20';
+    }
+
+    const isProjectLeader = project?.leader?._id === user?._id || project?.leader === user?._id;
+    const isProjectFaculty = project?.faculty?._id === user?._id || project?.faculty === user?._id;
+    const isAuthor = node.authorId?._id === user?._id || node.authorId === user?._id;
+
+    return (
+      <div key={node._id} className={`${depth === 0 ? 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 p-5 rounded-lg shadow-sm' : ''} flex flex-col gap-4 animate-fadeIn`}>
+        <div className="flex items-start gap-4 w-full">
+          <div className={`${depth > 0 ? 'w-7 h-7 text-[10px] rounded-md' : 'w-9 h-9 text-xs rounded-lg'} bg-slate-50 dark:bg-slate-950 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold border border-indigo-500/20 shrink-0`}>
+            {initials}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2">
+              <div className="flex items-center gap-2">
+                <h4 className={`${depth > 0 ? 'text-xs' : 'text-sm'} font-semibold text-slate-805 dark:text-white truncate`}>{name}</h4>
+                <span className={`${depth > 0 ? 'text-[7px] px-1' : 'text-[8px] px-1.5 py-0.5'} font-bold tracking-wider rounded border ${roleBadgeColor}`}>
+                  {role}
+                </span>
+                {node.isEdited && (
+                  <span className="text-[8px] text-indigo-500 dark:text-indigo-400 font-bold bg-indigo-500/5 px-1.5 py-0.5 rounded border border-indigo-500/10 uppercase tracking-wider select-none">
+                    Edited
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2.5">
+                <span className="text-[10px] text-slate-450 dark:text-slate-500 font-semibold flex items-center gap-1">
+                  <Clock className="w-3 h-3 text-slate-400 dark:text-slate-500" />
+                  {timeStr}
+                </span>
+                {(isAuthor || isProjectLeader || isProjectFaculty) && (
+                  <div className="flex items-center gap-1.5 border-l border-slate-100 dark:border-slate-800 pl-2.5">
+                    {isAuthor && (
+                      <button
+                        onClick={() => {
+                          setEditingCommentId(node._id);
+                          setEditingCommentContent(node.content);
+                          setReplyingCommentId(null);
+                        }}
+                        className="p-1 text-slate-400 hover:text-indigo-600 dark:text-slate-555 dark:hover:text-indigo-400 rounded hover:bg-slate-50 dark:hover:bg-slate-850 cursor-pointer transition-all"
+                        title="Edit Comment"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDeleteComment(node._id)}
+                      className="p-1 text-slate-400 hover:text-red-500 rounded hover:bg-red-500/5 cursor-pointer transition-all"
+                      title="Delete Comment"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {editingCommentId === node._id ? (
+              <form onSubmit={(e) => handleEditComment(node._id, e)} className="mt-2 space-y-2.5 animate-fadeIn">
+                <textarea
+                  value={editingCommentContent}
+                  onChange={(e) => setEditingCommentContent(e.target.value)}
+                  rows={3}
+                  className="block w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-xs font-medium"
+                />
+                <div className="flex gap-2 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => { setEditingCommentId(null); setEditingCommentContent(''); }}
+                    className="px-3 py-1.5 text-[11px] font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white rounded border border-slate-200 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-3 py-1.5 text-[11px] font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-all cursor-pointer shadow-sm"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <p className="text-slate-600 dark:text-slate-300 text-xs leading-relaxed font-medium whitespace-pre-wrap">{node.content}</p>
+            )}
+
+            {editingCommentId !== node._id && (
+              <div className="flex flex-wrap items-center gap-2.5 mt-3 pt-2 border-t border-slate-50 dark:border-slate-850/20">
+                <button
+                  onClick={() => {
+                    setReplyingCommentId(replyingCommentId === node._id ? null : node._id);
+                    setReplyContent('');
+                  }}
+                  className="flex items-center gap-1 text-[10px] font-bold text-slate-500 hover:text-indigo-650 dark:text-slate-450 dark:hover:text-indigo-400 cursor-pointer transition-all pr-2 border-r border-slate-100 dark:border-slate-850/20"
+                >
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  Reply
+                </button>
+
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {getGroupedReactions(node.reactions).map((group) => {
+                    const hasReacted = group.userIds.includes(user?._id?.toString());
+                    return (
+                      <button
+                        key={group.emoji}
+                        onClick={() => handleReactComment(node._id, group.emoji)}
+                        className={`relative px-2 py-0.5 rounded-full border text-[9px] font-extrabold flex items-center gap-1 transition-all cursor-pointer group ${hasReacted
+                            ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 font-bold'
+                            : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-855'
+                          }`}
+                      >
+                        <span>{group.emoji}</span>
+                        <span>{group.count}</span>
+
+                        {group.names.length > 0 && (
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-slate-900 dark:bg-slate-800 text-white dark:text-slate-200 text-[9px] font-semibold px-2.5 py-1 rounded shadow-md whitespace-nowrap z-50 pointer-events-none animate-fadeIn border border-slate-800 dark:border-slate-700">
+                            {group.names.join(', ')}
+                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900 dark:border-t-slate-800"></div>
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+
+                  <div className="relative">
+                    <button
+                      onClick={() => {
+                        setActiveCommentReactionPickerId(activeCommentReactionPickerId === node._id ? null : node._id);
+                      }}
+                      className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded hover:bg-slate-50 dark:hover:bg-slate-850 cursor-pointer transition-all flex items-center justify-center"
+                      title="Add Reaction"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                    {activeCommentReactionPickerId === node._id && (
+                      <div className="absolute left-0 bottom-full mb-1.5 z-50 bg-white dark:bg-slate-955 border border-slate-200 dark:border-slate-800 p-1 rounded-full shadow-lg flex items-center gap-1 animate-fadeIn">
+                        {['👍', '❤️', '🔥', '👏', '💡'].map((emoji) => (
+                          <button
+                            key={emoji}
+                            onClick={() => {
+                              handleReactComment(node._id, emoji);
+                              setActiveCommentReactionPickerId(null);
+                            }}
+                            className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-slate-150 dark:hover:bg-slate-800 text-xs transition-all cursor-pointer scale-100 hover:scale-120"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {replyingCommentId === node._id && (
+              <form onSubmit={(e) => handleReplyComment(node._id, e)} className="mt-3 flex gap-2.5 items-end animate-fadeIn">
+                <div className="flex-1">
+                  <textarea
+                    value={replyContent}
+                    onChange={(e) => setReplyContent(e.target.value)}
+                    placeholder="Write a reply..."
+                    rows={1}
+                    className="block w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-xs font-medium resize-none"
+                  />
+                </div>
+                <div className="flex gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setReplyingCommentId(null)}
+                    className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex items-center justify-center p-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-all cursor-pointer shadow-sm"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+
+        {node.replies && node.replies.length > 0 && (
+          <div className="pl-4 sm:pl-6 border-l border-slate-100 dark:border-slate-800/80 space-y-4 ml-3.5 sm:ml-4">
+            {node.replies.map((childReply) => renderCommentNode(childReply, depth + 1))}
+          </div>
+        )}
+      </div>
+    );
   };
 
   useEffect(() => {
@@ -417,9 +901,6 @@ export default function ProjectWorkspace() {
     if (selectedFilterType === 'all' || !selectedFilterValue || selectedFilterValue === 'All') {
       return true;
     }
-    if (selectedFilterType === 'title') {
-      return p.title === selectedFilterValue;
-    }
     if (selectedFilterType === 'year') {
       return p.year === Number(selectedFilterValue);
     }
@@ -432,7 +913,6 @@ export default function ProjectWorkspace() {
     return true;
   });
 
-  const uniqueTitles = [...new Set(papers.map(p => p.title).filter(Boolean))].sort();
   const uniqueYears = [...new Set(papers.map(p => p.year).filter(Boolean))].sort((a, b) => b - a);
   const uniqueKeywords = [...new Set(papers.flatMap(p => p.keywords || []).filter(Boolean))].sort();
   const uniqueAuthors = [...new Set(papers.flatMap(p => p.authors || []).filter(Boolean))].sort();
@@ -815,23 +1295,11 @@ export default function ProjectWorkspace() {
                     setSelectedFilterValue('All');
                   }}
                   className={`px-3 py-1 rounded-full text-[11px] font-extrabold tracking-wide transition-all cursor-pointer border ${selectedFilterType === 'all'
-                      ? 'bg-indigo-600 text-white dark:bg-indigo-650 border-transparent shadow-sm font-black'
-                      : 'bg-slate-100 dark:bg-slate-955 border-slate-205/50 dark:border-slate-800 text-slate-655 dark:text-slate-400 hover:bg-slate-150'
+                      ? 'bg-indigo-600 text-white dark:bg-indigo-600 border-transparent shadow-sm font-black'
+                      : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                     }`}
                 >
                   All
-                </button>
-                <button
-                  onClick={() => {
-                    setSelectedFilterType('title');
-                    setSelectedFilterValue('All');
-                  }}
-                  className={`px-3 py-1 rounded-full text-[11px] font-extrabold tracking-wide transition-all cursor-pointer border ${selectedFilterType === 'title'
-                      ? 'bg-indigo-600 text-white dark:bg-indigo-650 border-transparent shadow-sm font-black'
-                      : 'bg-slate-100 dark:bg-slate-955 border-slate-205/50 dark:border-slate-800 text-slate-655 dark:text-slate-400 hover:bg-slate-150'
-                    }`}
-                >
-                  Title
                 </button>
                 <button
                   onClick={() => {
@@ -839,8 +1307,8 @@ export default function ProjectWorkspace() {
                     setSelectedFilterValue('All');
                   }}
                   className={`px-3 py-1 rounded-full text-[11px] font-extrabold tracking-wide transition-all cursor-pointer border ${selectedFilterType === 'author'
-                      ? 'bg-indigo-600 text-white dark:bg-indigo-650 border-transparent shadow-sm font-black'
-                      : 'bg-slate-100 dark:bg-slate-955 border-slate-205/50 dark:border-slate-800 text-slate-655 dark:text-slate-400 hover:bg-slate-150'
+                      ? 'bg-indigo-600 text-white dark:bg-indigo-600 border-transparent shadow-sm font-black'
+                      : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                     }`}
                 >
                   Author
@@ -851,11 +1319,11 @@ export default function ProjectWorkspace() {
                     setSelectedFilterValue('All');
                   }}
                   className={`px-3 py-1 rounded-full text-[11px] font-extrabold tracking-wide transition-all cursor-pointer border ${selectedFilterType === 'keyword'
-                      ? 'bg-indigo-600 text-white dark:bg-indigo-650 border-transparent shadow-sm font-black'
-                      : 'bg-slate-100 dark:bg-slate-955 border-slate-205/50 dark:border-slate-800 text-slate-655 dark:text-slate-400 hover:bg-slate-150'
+                      ? 'bg-indigo-600 text-white dark:bg-indigo-600 border-transparent shadow-sm font-black'
+                      : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                     }`}
                 >
-                  Keyword
+                  Keywords
                 </button>
                 <button
                   onClick={() => {
@@ -863,8 +1331,8 @@ export default function ProjectWorkspace() {
                     setSelectedFilterValue('All');
                   }}
                   className={`px-3 py-1 rounded-full text-[11px] font-extrabold tracking-wide transition-all cursor-pointer border ${selectedFilterType === 'year'
-                      ? 'bg-indigo-600 text-white dark:bg-indigo-650 border-transparent shadow-sm font-black'
-                      : 'bg-slate-100 dark:bg-slate-955 border-slate-205/50 dark:border-slate-800 text-slate-655 dark:text-slate-400 hover:bg-slate-150'
+                      ? 'bg-indigo-600 text-white dark:bg-indigo-600 border-transparent shadow-sm font-black'
+                      : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                     }`}
                 >
                   Year
@@ -872,38 +1340,24 @@ export default function ProjectWorkspace() {
               </div>
 
               {selectedFilterType !== 'all' && (
-                <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-850/40 animate-fadeIn">
+                <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-800 animate-fadeIn">
                   <button
                     onClick={() => setSelectedFilterValue('All')}
                     className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold tracking-wide transition-all cursor-pointer ${selectedFilterValue === 'All'
-                        ? 'bg-indigo-600 text-white dark:bg-indigo-650 shadow'
-                        : 'bg-slate-100 dark:bg-slate-955 border border-slate-205/50 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-150'
+                        ? 'bg-indigo-600 text-white dark:bg-indigo-600 shadow'
+                        : 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                       }`}
                   >
                     All
                   </button>
-
-                  {selectedFilterType === 'title' && uniqueTitles.map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setSelectedFilterValue(t)}
-                      className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold tracking-wide transition-all cursor-pointer max-w-[200px] truncate ${selectedFilterValue === t
-                          ? 'bg-indigo-600 text-white dark:bg-indigo-650 shadow'
-                          : 'bg-slate-105 dark:bg-slate-955 border border-slate-205/50 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-150'
-                        }`}
-                      title={t}
-                    >
-                      {t}
-                    </button>
-                  ))}
 
                   {selectedFilterType === 'year' && uniqueYears.map((y) => (
                     <button
                       key={y}
                       onClick={() => setSelectedFilterValue(String(y))}
                       className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold tracking-wide transition-all cursor-pointer ${selectedFilterValue === String(y)
-                          ? 'bg-indigo-600 text-white dark:bg-indigo-650 shadow'
-                          : 'bg-slate-100 dark:bg-slate-955 border border-slate-205/50 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-150'
+                          ? 'bg-indigo-600 text-white dark:bg-indigo-600 shadow'
+                          : 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                         }`}
                     >
                       {y}
@@ -915,8 +1369,8 @@ export default function ProjectWorkspace() {
                       key={kw}
                       onClick={() => setSelectedFilterValue(kw)}
                       className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold tracking-wide transition-all cursor-pointer ${selectedFilterValue === kw
-                          ? 'bg-indigo-600 text-white dark:bg-indigo-650 shadow'
-                          : 'bg-slate-100 dark:bg-slate-955 border border-slate-205/50 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-150'
+                          ? 'bg-indigo-600 text-white dark:bg-indigo-600 shadow'
+                          : 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                         }`}
                     >
                       {kw}
@@ -928,8 +1382,8 @@ export default function ProjectWorkspace() {
                       key={auth}
                       onClick={() => setSelectedFilterValue(auth)}
                       className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold tracking-wide transition-all cursor-pointer ${selectedFilterValue === auth
-                          ? 'bg-indigo-600 text-white dark:bg-indigo-650 shadow'
-                          : 'bg-slate-100 dark:bg-slate-955 border border-slate-205/50 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-150'
+                          ? 'bg-indigo-600 text-white dark:bg-indigo-600 shadow'
+                          : 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
                         }`}
                     >
                       {auth}
@@ -965,7 +1419,7 @@ export default function ProjectWorkspace() {
                     <div>
                       <div className="flex items-start justify-between gap-3 mb-4">
                         <div
-                          className="bg-indigo-50 dark:bg-slate-850 border border-indigo-150 dark:border-slate-800 text-slate-855 dark:text-slate-200 font-bold px-3 py-1.5 rounded-lg text-xs leading-snug truncate max-w-[82%] hover:underline transition-all cursor-pointer shadow-2xs"
+                          className="bg-indigo-50 dark:bg-slate-800 border border-indigo-100 dark:border-slate-700 text-indigo-900 dark:text-indigo-200 font-bold px-3 py-1.5 rounded-lg text-xs leading-snug truncate max-w-[82%] hover:underline transition-all cursor-pointer shadow-2xs"
                           onClick={(e) => { e.stopPropagation(); handleOpenNotes(paper); }}
                         >
                           {paper.title}
@@ -1055,31 +1509,18 @@ export default function ProjectWorkspace() {
                   </p>
 
                   <form onSubmit={handleAddProgressLog} className="mt-6 space-y-4 border-t border-slate-100 dark:border-slate-800/80 pt-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
-                      <div className="sm:col-span-2">
-                        <label className="block text-[10px] font-bold tracking-wider uppercase text-slate-550 dark:text-slate-400">
-                          Progress Description
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={newProgressDesc}
-                          onChange={(e) => setNewProgressDesc(e.target.value)}
-                          placeholder="e.g. Implemented Mongoose models and verified references"
-                          className="mt-2 block w-full px-3 py-2 bg-slate-50 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-slate-200 placeholder-slate-450 dark:placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-xs font-semibold"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-bold tracking-wider uppercase text-slate-550 dark:text-slate-400">
-                          Date (Optional)
-                        </label>
-                        <input
-                          type="date"
-                          value={newProgressDate}
-                          onChange={(e) => setNewProgressDate(e.target.value)}
-                          className="mt-2 block w-full px-3 py-2 bg-slate-50 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-xs font-semibold cursor-pointer"
-                        />
-                      </div>
+                    <div>
+                      <label className="block text-[10px] font-bold tracking-wider uppercase text-slate-550 dark:text-slate-400">
+                        Progress Description
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={newProgressDesc}
+                        onChange={(e) => setNewProgressDesc(e.target.value)}
+                        placeholder="e.g. Implemented Mongoose models and verified references"
+                        className="mt-2 block w-full px-3 py-2 bg-slate-50 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-slate-200 placeholder-slate-450 dark:placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-xs font-semibold"
+                      />
                     </div>
                     <button
                       type="submit"
@@ -1129,26 +1570,153 @@ export default function ProjectWorkspace() {
                       const name = log.userId?.name || 'Researcher';
                       const initials = name.slice(0, 2).toUpperCase();
                       const dateStr = new Date(log.date).toLocaleDateString(undefined, {
-                        weekday: 'long',
                         year: 'numeric',
-                        month: 'long',
+                        month: 'short',
                         day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
                       });
+                      const isAuthor = log.userId?._id === user?._id || log.userId === user?._id;
+
+                      const logAuthorId = log.userId?._id || log.userId;
+                      let logRole = 'MEMBER';
+                      if (project?.leader?._id === logAuthorId || project?.leader === logAuthorId) {
+                        logRole = 'LEADER';
+                      } else if (project?.faculty?._id === logAuthorId || project?.faculty === logAuthorId) {
+                        logRole = 'FACULTY';
+                      }
+
+                      let logRoleBadgeColor = 'bg-emerald-500/10 text-emerald-650 dark:text-emerald-400 border-emerald-500/20';
+                      if (logRole === 'LEADER') {
+                        logRoleBadgeColor = 'bg-indigo-500/10 text-indigo-650 dark:text-indigo-400 border-indigo-500/20';
+                      } else if (logRole === 'FACULTY') {
+                        logRoleBadgeColor = 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20';
+                      }
 
                       return (
                         <div key={log._id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 p-5 rounded-lg shadow-sm flex items-start gap-4 animate-fadeIn">
-                          <div className="w-9 h-9 rounded-lg bg-slate-50 dark:bg-slate-950 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold border border-indigo-500/20 shrink-0 text-xs">
+                          <div className="w-9 h-9 rounded-lg bg-slate-50 dark:bg-slate-955 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold border border-indigo-500/20 shrink-0 text-xs">
                             {initials}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2">
-                              <h4 className="text-sm font-semibold text-slate-805 dark:text-white truncate">{name}</h4>
-                              <span className="text-[10px] text-slate-450 dark:text-slate-500 font-semibold flex items-center gap-1">
-                                <Calendar className="w-3 h-3 text-slate-405 dark:text-slate-500" />
-                                {dateStr}
-                              </span>
+                              <div className="flex items-center gap-2 animate-fadeIn">
+                                <h4 className="text-sm font-semibold text-slate-855 dark:text-white truncate">{name}</h4>
+                                <span className={`text-[8px] px-1.5 py-0.5 font-bold tracking-wider rounded border ${logRoleBadgeColor}`}>
+                                  {logRole}
+                                </span>
+                                {log.isEdited && (
+                                  <span className="text-[8px] text-indigo-500 dark:text-indigo-400 font-bold bg-indigo-500/5 px-1.5 py-0.5 rounded border border-indigo-500/10 uppercase tracking-wider select-none animate-fadeIn">
+                                    Edited
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2.5">
+                                <span className="text-[10px] text-slate-450 dark:text-slate-500 font-semibold flex items-center gap-1">
+                                  <Clock className="w-3 h-3 text-slate-405 dark:text-slate-500" />
+                                  {dateStr}
+                                </span>
+
+                                <div className="relative border-l border-slate-100 dark:border-slate-800 pl-2.5">
+                                  <button
+                                    onClick={() => {
+                                      setActiveProgressReactionPickerId(activeProgressReactionPickerId === log._id ? null : log._id);
+                                    }}
+                                    className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded hover:bg-slate-50 dark:hover:bg-slate-850 cursor-pointer transition-all flex items-center justify-center"
+                                    title="Add Reaction"
+                                  >
+                                    <Plus className="w-3.5 h-3.5" />
+                                  </button>
+                                  {activeProgressReactionPickerId === log._id && (
+                                    <div className="absolute right-0 top-full mt-1.5 z-50 bg-white dark:bg-slate-955 border border-slate-205 dark:border-slate-800 p-1 rounded-full shadow-lg flex items-center gap-1 animate-fadeIn">
+                                      {['👍', '❤️', '🔥', '👏', '💡'].map((emoji) => (
+                                        <button
+                                          key={emoji}
+                                          onClick={() => {
+                                            handleReactProgress(log._id, emoji);
+                                            setActiveProgressReactionPickerId(null);
+                                          }}
+                                          className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-slate-150 dark:hover:bg-slate-800 text-xs transition-all cursor-pointer scale-100 hover:scale-120"
+                                        >
+                                          {emoji}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {isAuthor && (
+                                  <div className="flex items-center border-l border-slate-100 dark:border-slate-800 pl-2.5">
+                                    <button
+                                      onClick={() => {
+                                        setEditingProgressId(log._id);
+                                        setEditingProgressDesc(log.description);
+                                      }}
+                                      className="p-1 text-slate-400 hover:text-indigo-600 dark:text-slate-555 dark:hover:text-indigo-400 rounded hover:bg-slate-50 dark:hover:bg-slate-850 cursor-pointer transition-all"
+                                      title="Edit Log"
+                                    >
+                                      <Edit2 className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                            <p className="text-slate-600 dark:text-slate-305 text-xs leading-relaxed font-medium whitespace-pre-wrap">{log.description}</p>
+
+                            {editingProgressId === log._id ? (
+                              <form onSubmit={(e) => handleEditProgress(log._id, e)} className="mt-2 space-y-2.5 animate-fadeIn">
+                                <textarea
+                                  value={editingProgressDesc}
+                                  onChange={(e) => setEditingProgressDesc(e.target.value)}
+                                  rows={2}
+                                  className="block w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-900 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-xs font-medium"
+                                />
+                                <div className="flex gap-2 justify-end">
+                                  <button
+                                    type="button"
+                                    onClick={() => { setEditingProgressId(null); setEditingProgressDesc(''); }}
+                                    className="px-3 py-1.5 text-[11px] font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white rounded border border-slate-200 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800"
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    type="submit"
+                                    className="px-3 py-1.5 text-[11px] font-semibold bg-indigo-650 hover:bg-indigo-755 text-white rounded-lg transition-all cursor-pointer shadow-sm"
+                                  >
+                                    Save Changes
+                                  </button>
+                                </div>
+                              </form>
+                            ) : (
+                              <p className="text-slate-600 dark:text-slate-305 text-xs leading-relaxed font-medium whitespace-pre-wrap">{log.description}</p>
+                            )}
+
+                             {log.reactions && log.reactions.length > 0 && (
+                               <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-2.5 border-t border-slate-50 dark:border-slate-850/20 animate-fadeIn">
+                                 {getGroupedReactions(log.reactions).map((group) => {
+                                   const hasReacted = group.userIds.includes(user?._id?.toString());
+                                   return (
+                                     <button
+                                       key={group.emoji}
+                                       onClick={() => handleReactProgress(log._id, group.emoji)}
+                                       className={`relative px-2 py-0.5 rounded-full border text-[9px] font-extrabold flex items-center gap-1 transition-all cursor-pointer group ${hasReacted
+                                           ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 font-bold shadow-2xs'
+                                           : 'bg-slate-50 dark:bg-slate-950 border-slate-205 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-855'
+                                         }`}
+                                     >
+                                       <span>{group.emoji}</span>
+                                       <span>{group.count}</span>
+
+                                       {group.names.length > 0 && (
+                                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-slate-900 dark:bg-slate-800 text-white dark:text-slate-200 text-[9px] font-semibold px-2.5 py-1 rounded shadow-md whitespace-nowrap z-50 pointer-events-none animate-fadeIn border border-slate-800 dark:border-slate-700">
+                                           {group.names.join(', ')}
+                                           <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900 dark:border-t-slate-800"></div>
+                                         </div>
+                                       )}
+                                     </button>
+                                   );
+                                 })}
+                               </div>
+                             )}
                           </div>
                         </div>
                       );
@@ -1293,48 +1861,7 @@ export default function ProjectWorkspace() {
               </div>
             ) : (
               <div className="space-y-4">
-                {comments.map((comment) => {
-                  const name = comment.authorId?.name || 'Researcher';
-                  const role = comment.authorId?.role || 'MEMBER';
-                  const initials = name.slice(0, 2).toUpperCase();
-                  const timeStr = new Date(comment.createdAt).toLocaleDateString(undefined, {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  });
-
-                  let roleBadgeColor = 'bg-emerald-500/10 text-emerald-650 dark:text-emerald-400 border-emerald-500/20';
-                  if (role === 'LEADER') {
-                    roleBadgeColor = 'bg-indigo-500/10 text-indigo-650 dark:text-indigo-400 border-indigo-500/20';
-                  } else if (role === 'FACULTY') {
-                    roleBadgeColor = 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20';
-                  }
-
-                  return (
-                    <div key={comment._id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 p-5 rounded-lg shadow-sm flex items-start gap-4 animate-fadeIn">
-                      <div className="w-9 h-9 rounded-lg bg-slate-50 dark:bg-slate-950 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold border border-indigo-500/20 shrink-0 text-xs">
-                        {initials}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2">
-                          <div className="flex items-center gap-2">
-                            <h4 className="text-sm font-semibold text-slate-800 dark:text-white truncate">{name}</h4>
-                            <span className={`text-[8px] font-bold tracking-wider px-1.5 py-0.5 rounded border ${roleBadgeColor}`}>
-                              {role}
-                            </span>
-                          </div>
-                          <span className="text-[10px] text-slate-450 dark:text-slate-500 font-semibold flex items-center gap-1">
-                            <Clock className="w-3 h-3 text-slate-400 dark:text-slate-500" />
-                            {timeStr}
-                          </span>
-                        </div>
-                        <p className="text-slate-600 dark:text-slate-300 text-xs leading-relaxed font-medium whitespace-pre-wrap">{comment.content}</p>
-                      </div>
-                    </div>
-                  );
-                })}
+                {buildCommentTree(comments).map((rootComment) => renderCommentNode(rootComment, 0))}
               </div>
             )}
           </div>
@@ -1406,7 +1933,6 @@ export default function ProjectWorkspace() {
 
                   return (
                     <div key={activity._id} className="relative animate-fadeIn">
-                      {/* Timeline Circle */}
                       <div className="absolute -left-10 top-0.5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800/80 w-8 h-8 rounded-full flex items-center justify-center z-10 shadow-sm">
                         {typeIcon}
                       </div>

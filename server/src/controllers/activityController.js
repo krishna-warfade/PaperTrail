@@ -6,7 +6,6 @@ exports.getProjectActivity = async (req, res) => {
   try {
     const { projectId } = req.params;
 
-    // Check project authorization
     const project = await Project.findById(projectId);
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });

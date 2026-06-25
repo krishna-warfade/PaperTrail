@@ -9,11 +9,9 @@ export default function ResetPassword() {
   const [searchParams] = useSearchParams();
   const { theme, toggleTheme } = useTheme();
 
-  // Get email/token from URL search parameters (if clicked from email link)
   const urlEmail = searchParams.get('email') || '';
   const urlToken = searchParams.get('token') || '';
 
-  // Get email/message/devToken from route state (if redirected from ForgotPassword page)
   const stateEmail = location.state?.email || '';
   const stateMessage = location.state?.message || '';
   const stateDevToken = location.state?.devToken || '';
@@ -29,13 +27,11 @@ export default function ResetPassword() {
   });
   const [submitting, setSubmitting] = useState(false);
 
-  // If search parameters change, keep state sync
   useEffect(() => {
     if (urlEmail) setEmail(urlEmail);
     if (urlToken) setToken(urlToken);
   }, [urlEmail, urlToken]);
 
-  // If there's a bypass token in the search parameters or state, show it
   useEffect(() => {
     const queryDevToken = searchParams.get('devToken');
     if (queryDevToken) {
@@ -89,7 +85,6 @@ export default function ResetPassword() {
   return (
     <div className="min-h-screen md:h-screen md:overflow-hidden bg-slate-50 dark:bg-slate-955 flex flex-col md:flex-row relative overflow-hidden transition-colors duration-200">
       
-      {/* Floating Theme Switcher */}
       <div className="absolute top-4 right-4 z-50">
         <button
           onClick={toggleTheme}
@@ -100,11 +95,9 @@ export default function ResetPassword() {
         </button>
       </div>
 
-      {/* Background Radial Glow */}
       <div className="hidden dark:block absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-500/5 rounded-full blur-[110px] pointer-events-none"></div>
       <div className="hidden dark:block absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-96 h-96 bg-violet-500/5 rounded-full blur-[110px] pointer-events-none"></div>
 
-      {/* Left Column: Form */}
       <div className="w-full md:w-[45%] flex flex-col justify-center py-12 px-6 sm:px-12 lg:px-16 bg-white dark:bg-slate-950 z-10 shadow-xl border-r border-slate-100 dark:border-slate-900">
         
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
@@ -261,7 +254,6 @@ export default function ResetPassword() {
         </div>
       </div>
 
-      {/* Right Column: Visual Info Panels */}
       <div className="hidden md:flex md:w-[55%] md:h-full bg-gradient-to-br from-slate-50 to-indigo-50/50 dark:from-slate-900 dark:to-indigo-950 items-center justify-center p-12 text-slate-900 dark:text-white relative">
         <div className="max-w-md space-y-6 z-10">
           <div className="space-y-3">

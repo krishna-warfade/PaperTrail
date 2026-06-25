@@ -26,7 +26,6 @@ export default function AcceptInvite() {
       const data = await res.json();
       if (res.ok) {
         if (data.registered) {
-          // email is already registered, redirect to login page
           navigate('/login', {
             state: {
               email: data.email,
@@ -34,7 +33,6 @@ export default function AcceptInvite() {
             }
           });
         } else {
-          // email is not registered, redirect to register page
           navigate('/register', {
             state: {
               email: data.email,
@@ -113,7 +111,6 @@ export default function AcceptInvite() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden transition-colors duration-200 dot-grid">
       
-      {/* Floating Theme Switcher */}
       <div className="absolute top-4 right-4 z-50">
         <button
           onClick={toggleTheme}

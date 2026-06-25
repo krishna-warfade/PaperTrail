@@ -72,13 +72,10 @@ const forgotPassword = async (req, res) => {
             return res.status(404).json({ message: 'User not found with this email' });
         }
 
-        // Generate 6-digit verification code
         const code = Math.floor(100000 + Math.random() * 900000).toString();
         user.resetPasswordToken = code;
-        user.resetPasswordExpire = Date.now() + 10 * 60 * 1000; // 10 minutes expiry
+        user.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
         await user.save();
-
-        // Send email
         const html = `
             <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
                 <h2 style="color: #6366f1;">PaperTrail Password Reset Request</h2>
